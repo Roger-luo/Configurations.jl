@@ -1,138 +1,333 @@
 module Options
 
-using MatchCore
-using ExprTools
-
 export @option
 
-isoption(x) = false
+using OrderedCollections
+using MatchCore
+using Crayons.Box
+using ExprTools
+using TOML
 
-macro option(expr)
-    expr = macroexpand(__module__, expr)
-    return esc(option_m(expr))
+"""
+    to_dict(option) -> OrderedDict
+
+Convert an option to an `OrderedDict`.
+"""
+function to_dict(x)
+    is_option(x) || error("argument is not an option type")
+    return dictionalize(x)
 end
 
-option_m(x) = error("invalid usage of @option")
+function to_toml(x)
+    d = to_dict(x)
+    return sprint(TOML.print, d)
+end
 
-function option_m(ex::Expr)
+dictionalize(x) = x
+is_option(x) = false
+
+
+struct NoDefault end
+
+const no_default = NoDefault()
+const Maybe{T} = Union{Nothing, T}
+
+struct Field
+    name::Symbol
+    type::Any
+    default::Any
+    line
+end
+
+struct OptionDef
+    name::Symbol
+    ismutable::Bool
+    parameters::Vector{Any}
+    supertype
+
+    fields::Vector{Field}
+end
+
+function Base.show(io::IO, x::Field)
+    indent = get(io, :indent, 0)
+    print(io, " "^indent, x.name)
+
+    if x.type !== Any
+        print(io, "::", GREEN_FG(string(x.type)))
+    end
+
+    if x.default !== no_default
+        print(io, " = ", x.default)
+    end
+end
+
+function Base.show(io::IO, x::OptionDef)
+    indent = get(io, :indent, 0)
+
+    if x.ismutable
+        print(io, " "^indent, BLUE_FG("mutable "))
+    end
+
+    print(io, BLUE_FG("struct"))
+    print(io, " ", x.name)
+    if !isempty(x.parameters)
+        print(io, "{", DARK_GRAY_FG(join(string.(x.parameters), ", ")), "}")
+    end
+
+    if x.supertype !== nothing
+        print(io, " <: ", GREEN_FG(string(x.supertype)))
+    end
+
+    println(io)
+    let io = IOContext(io, :indent=>indent+2)
+        for (k, each) in enumerate(x.fields)
+            println(io, each)
+        end
+    end
+
+    print(io, " "^indent, BLUE_FG("end"))
+end
+
+function OptionDef(@nospecialize(ex))
+    ex isa Expr || error("invalid usage of @option")
     ex.head === :struct || error("invalid usage of @option")
-    ex.args[1] && error("options must be immutable")
+
+    name, parameters, supertype = split_name(ex)
+    fields = split_body(ex)
+    return OptionDef(name, ex.args[1], parameters, supertype, fields)
+end
+
+function split_name(ex::Expr)
     T = ex.args[2]
-    body = ex.args[3]::Expr
 
-    args, kwdefs, body = split_kwdef(body)
-    struct_def = quote
-        Core.@__doc__ $(Expr(:struct, ex.args[1], T, body))
+    return @smatch T begin
+        :($name{$(params...)}) => (name, params, nothing)
+        :($name{$(params...)} <: $type) => (name, params, type)
+        ::Symbol => (T, [], nothing)
+        :($name <: $type) => (name, [], type)
+        _ => error("invalid @option: $ex")
     end
-    isempty(kwdefs) && return struct_def
-
-    if T isa Expr && T.head === :(<:) # supertype
-        T = T.args[1]
-    end
-    ex = Expr(:block, struct_def)
-
-    # contain typevars
-    if T isa Expr && T.head === :curly
-        S = T.args[1]
-        P = T.args[2:end]
-        Q = Any[U isa Expr && U.head === :(<:) ? U.args[1] : U for U in P]
-        SQ = :($S{$(Q...)})
-
-        push!(ex.args, quote
-            function $SQ(;$(kwdefs...)) where {$(P...)}
-                $SQ($(args...))
-            end
-        end)
-    end
-
-    push!(ex.args, quote
-        function $(object_name(T))(;$(kwdefs...))
-            $(object_name(T))($(args...))
-        end
-    end)
-
-    # printing
-    print_stmts = Expr(:block)
-    for each in args
-        push!(print_stmts.args, quote
-            print(inner_io, " "^indent, " "^2, $(string(each)), " = ")
-            show(inner_io, x.$each)
-            println(inner_io, ", ")
-        end)
-    end
-
-    push!(ex.args, quote
-        function Base.show(io::IO, x::$(object_name(T)))
-            indent = get(io, :indent, 0)
-            summary(io, x)
-            println(io, "(")
-            inner_io = IOContext(io, :indent => indent + 2)
-            $(print_stmts)
-            print(io, " "^indent, ")")
-        end
-    end)
-
-    push!(ex.args, :( $(GlobalRef(Options, :isoption))(::Type{<:$(object_name(T))}) = true))
-    push!(ex.args, :( $(GlobalRef(Options, :isoption))(::$(object_name(T))) = true ))
-    
-    push!(ex.args, nothing)
-    return ex
 end
 
-function split_kwdef(ex::Expr)
-    ex.head === :block || error("expect a block")
-    args = Symbol[]
-    kwdefs = []
+function split_body(ex::Expr)
+    body = ex.args[3]
+    body.head === :block || error("expect a block, got $ex")
+
+    fields = Field[]
+    line = nothing
+
+    for each in body.args
+        item = @smatch each begin
+            :($name::$type = $default) => Field(name, type, default, line)
+
+            :($name::$type) => Field(name, type, no_default, line)
+
+            :($name = $default) => Field(name, Any, default, line)
+
+            ::Symbol => Field(each, Any, no_default, line)
+
+            ::LineNumberNode => begin
+                line = each
+            end
+            _ => error("invalid @option statement: $each")
+        end
+
+        if item isa Field
+            push!(fields, item)
+        end
+    end
+    return fields
+end
+
+function codegen_struct_def(x::OptionDef)
+    T = x.name
+
+    if !isempty(x.parameters)
+        T = Expr(:curly, T, x.parameters...)
+    end
+
+    if x.supertype !== nothing
+        T = Expr(:(<:), T, x.supertype)
+    end
+
     body = Expr(:block)
-    for each in ex.args
-        if each isa Expr
-            if each.head === :(=)
-                push!(body.args, each.args[1])
-                name = object_name(each)
-                push!(args, name)
-                push!(kwdefs, Expr(:kw, name, each.args[2]))
-            else
-                push!(body.args, each)
-                name = object_name(each)
-                push!(args, name)
-                push!(kwdefs, name)
-            end
+    for each in x.fields
+        if each.line !== nothing
+            push!(body.args, each.line)
+        end
+
+        if each.type === Any
+            item = each.name
         else
-            push!(body.args, each)
+            item = :($(each.name)::$(each.type))
         end
+        push!(body.args, item)
     end
-    return args, kwdefs, body
+    return Expr(:struct, x.ismutable, T, body)
 end
 
-function object_name(ex)
-    ex isa Expr || return ex
-
-    if ex.head === :struct
-        return object_name(ex.args[1])
-    elseif ex.head === :(<:)
-        return object_name(ex.args[1])
-    elseif ex.head === :curly
-        return object_name(ex.args[1])
-    elseif ex.head === :(=)
-        return object_name(ex.args[1])
-    elseif ex.head === :(::)
-        return object_name(ex.args[1])
-    else
-        error("unrecognized expression: $ex")
-    end
-end
-
-function from_dict(::Type{T}, d::AbstractDict) where T
-    isoption(T) || error("type $T is not an option type")
+function codegen_kw_fn(x::OptionDef)
     kwargs = []
-    for (k, v) in d
-        for each in fieldnames(T)
-            if k == string(each)
-                push!(kwargs, each=>v)
-            end
+    for each in x.fields
+        if each.default === no_default
+            push!(kwargs, each.name)
+        else
+            push!(kwargs, Expr(:kw, each.name, each.default))
         end
     end
-    return T(;kwargs...)
+    
+    def = Dict(
+        :name => x.name,
+        :kwargs => kwargs,
+        :body => Expr(:call, x.name, [each.name for each in x.fields]...)
+    )
+    return combinedef(def)
+end
+
+function codegen_from_dict(x::OptionDef)
+    d = gensym(:d)
+    validate = Expr(:block)
+    create = Expr(:call, x.name)
+    # check required fields
+    for each in x.fields
+        key = string(each.name)
+        msg = "option $key is required"
+        if each.default === no_default
+            push!(validate.args, :($haskey($d, $key) || $error($msg)))
+            push!(create.args, :($d[$key]))
+        else
+            push!(create.args, :($get($d, $key, $(each.default))))
+        end
+    end
+
+    def = Dict(
+        :name => x.name,
+        :args => [:($d::AbstractDict{String})],
+        :body => quote
+            $validate
+            $create
+        end
+    )
+
+    return combinedef(def)
+end
+
+function codegen_from_toml(x::OptionDef)
+    return :(
+        function $(x.name)(filename::String)
+            $(x.name)($TOML.parsefile(filename))
+        end
+    )
+end
+
+function codegen_show_text(x::OptionDef)
+    body = quote
+        indent = get(io, :indent, 0)
+        println(io, $(GREEN_FG(string(x.name))), "(;")
+    end
+
+    for each in x.fields
+        push!(body.args, :( print(io, " "^(indent+4), $(LIGHT_BLUE_FG(string(each.name))), " = ") ))
+        push!(body.args, :( show(IOContext(io, :indent=>(indent+4)), m, x.$(each.name)) ))
+        push!(body.args, :( println(io, ",") ))
+    end
+    
+    push!(body.args, :(print(io, " "^indent, ")")))
+
+    def = Dict(
+        :name => GlobalRef(Base, :show),
+        :args => [:(io::IO), :(m::MIME"text/plain"), :(x::$(x.name))],
+        :body => body,
+    )
+
+    return combinedef(def)
+end
+
+function codegen_to_dict(x::OptionDef)
+    dict = Expr(:call, :($OrderedDict{String, Any}))
+
+    for each in x.fields
+        key = string(each.name)
+        push!(dict.args, :($key => $dictionalize(option.$(each.name))))
+    end
+
+    def = Dict(
+        :name => GlobalRef(Options, :dictionalize),
+        :args => [:(option::$(x.name))],
+        :body => quote
+            return $dict
+        end,
+    )
+    return combinedef(def)
+end
+
+function codegen_is_option(x::OptionDef)
+    :($(GlobalRef(Options, :is_option))(::$(x.name)) = true)
+end
+
+function codegen_convert(x::OptionDef)
+    :(Base.convert(::Type{<:$(x.name)}, d::AbstractDict{String}) = $(x.name)(d))
+end
+
+function option_m(@nospecialize(ex))
+    def = OptionDef(ex)
+
+    quote
+        $(codegen_struct_def(def))
+        Core.@__doc__ $(def.name)
+        $(codegen_kw_fn(def))
+        $(codegen_from_dict(def))
+        $(codegen_from_toml(def))
+        $(codegen_convert(def))
+        $(codegen_to_dict(def))
+        $(codegen_show_text(def))
+        $(codegen_is_option(def))
+        nothing
+    end
+end
+
+"""
+    @option <struct def>
+
+Define an option struct type. This will auto-generate methods that parse a given `Dict{String}`
+object (the keys must be of type `String`) into an instance of the struct type you defined.
+
+# Example
+
+```julia
+julia> @option struct OptionA
+           name::String
+           int::Int = 1
+       end
+
+julia> @option struct OptionB
+           opt::OptionA = OptionA(;name = "Sam")
+           float::Float64 = 0.3
+       end
+
+julia> d = Dict(
+           "opt" => Dict(
+               "name" => "Roger",
+               "int" => 2,
+           ),
+           "float" => 0.33
+       )
+Dict{String, Any} with 2 entries:
+  "opt"   => Dict{String, Any}("int"=>2, "name"=>"Roger")
+  "float" => 0.33
+
+julia> OptionB(d)
+OptionB(;
+  opt = OptionA(;
+    name = "Roger",
+    int = 2,
+  ),
+  float = 0.33,
+)
+```
+"""
+macro option(ex)
+    esc(option_m(ex))
 end
 
 end

@@ -1,43 +1,44 @@
 using Options
-using Options: option_m
+using Options: @option
+using OrderedCollections
 using Test
 
-@option struct OptionB
-    version::VersionNumber = v"0.1.0"
-end
-
-"""
-Option A
-"""
+"Option A"
 @option struct OptionA
-    str::String = "string"
+    name::String
     int::Int = 1
-    bool::Bool = false
-    other::OptionB = OptionB()
 end
 
-ex = :(
-    struct OptionA
-        str::String = "string"
-        int::Int = 1
-        bool::Bool = false
-        other::OptionB = OptionB()
-    end
+"Option B"
+@option struct OptionB
+    opt::OptionA = OptionA(;name = "Sam")
+    float::Float64 = 0.3
+end
+
+d = OrderedDict{String, Any}(
+    "opt" => OrderedDict{String, Any}(
+        "name" => "Roger",
+        "int" => 2,
+    ),
+    "float" => 0.33
 )
 
-ex = :(
-    struct OptionA{T}
-        str::String = "string"
-        int::T = 1
-        bool::Bool = false
-        other::OptionB = OptionB()
-    end
-)
+option = OptionB(d)
 
-option_m(ex)
+@testset "options" begin
+    @test option == OptionB(;
+        opt = OptionA(;
+            name = "Roger",
+            int = 2,
+        ),
+        float = 0.33,
+    )
 
-d = Dict(
-    "str" => "a string",
-    "int" => 2
-)
-Options.from_dict(OptionA, d)
+    @test OptionB("option.toml") == option
+end
+
+@testset "to_dict" begin
+    @test_throws ErrorException Options.to_dict("aaa")
+    @test Options.to_dict(option) == d
+    @test Options.to_toml(option) == "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
+end
