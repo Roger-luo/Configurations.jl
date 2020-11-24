@@ -8,6 +8,11 @@ using Crayons.Box
 using ExprTools
 using TOML
 
+struct NoDefault end
+
+const no_default = NoDefault()
+const Maybe{T} = Union{Nothing, T}
+
 """
     to_dict(option) -> OrderedDict
 
@@ -26,11 +31,33 @@ end
 dictionalize(x) = x
 is_option(x) = false
 
+function from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} = nothing; kw...) where T
+    is_option(T) || error("not an option type")
+    fnames = fieldnames(T)
+    ftypes = fieldtypes(T)
 
-struct NoDefault end
+    for (name, type) in zip(fnames, ftypes)
+        if prefix === nothing
+            key = name
+        else
+            key = Symbol(prefix, :_, name)
+        end
 
-const no_default = NoDefault()
-const Maybe{T} = Union{Nothing, T}
+        if is_option(type)
+            d[string(name)] = OrderedDict{String, Any}()
+            from_kwargs!(d[string(name)], type, key; kw...)
+        elseif haskey(kw, key)
+            d[string(name)] = kw[key]
+        end
+    end
+
+    return T(d)
+end
+
+function from_kwargs(::Type{T}; kw...) where T
+    d = OrderedDict{String, Any}()
+    return from_kwargs!(d, T; kw...)
+end
 
 struct Field
     name::Symbol
@@ -262,7 +289,10 @@ function codegen_to_dict(x::OptionDef)
 end
 
 function codegen_is_option(x::OptionDef)
-    :($(GlobalRef(Configurations, :is_option))(::$(x.name)) = true)
+    quote
+        $(GlobalRef(Configurations, :is_option))(::$(x.name)) = true
+        $(GlobalRef(Configurations, :is_option))(::Type{<:$(x.name)}) = true
+    end
 end
 
 function codegen_convert(x::OptionDef)

@@ -1,4 +1,5 @@
 using Configurations
+using Configurations: to_dict, to_toml, from_kwargs
 using OrderedCollections
 using Test
 
@@ -37,7 +38,11 @@ option = OptionB(d)
 end
 
 @testset "to_dict" begin
-    @test_throws ErrorException Configurations.to_dict("aaa")
-    @test Configurations.to_dict(option) == d
-    @test Configurations.to_toml(option) == "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
+    @test_throws ErrorException to_dict("aaa")
+    @test to_dict(option) == d
+    @test to_toml(option) == "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
+end
+
+@testset "from_kwargs" begin
+    @test Configurations.from_kwargs(OptionB; opt_name="Roger", opt_int=2, float=0.33) == option
 end
