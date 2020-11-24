@@ -31,7 +31,11 @@ end
 dictionalize(x) = x
 is_option(x) = false
 
-function from_dict(::Type{T}, ::AbstractDict{String}) where T
+function from_dict(::Type{T}, d::AbstractDict{String}) where T
+    return default_from_dict(T, d)
+end
+
+function default_from_dict(::Type{T}, ::AbstractDict{String}) where T
     error("$T is not an option type")
 end
 
@@ -237,7 +241,7 @@ function codegen_from_dict(x::OptionDef)
     end
 
     def = Dict(
-        :name => GlobalRef(Configurations, :from_dict),
+        :name => GlobalRef(Configurations, :default_from_dict),
         :args => [:(::Type{<:$(x.name)}), :($d::AbstractDict{String})],
         :body => quote
             $validate
