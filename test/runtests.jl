@@ -1,5 +1,5 @@
 using Configurations
-using Configurations: to_dict, to_toml, from_kwargs
+using Configurations: to_dict, to_toml, from_kwargs, from_dict, from_toml
 using OrderedCollections
 using Test
 
@@ -23,7 +23,7 @@ d = OrderedDict{String, Any}(
     "float" => 0.33
 )
 
-option = OptionB(d)
+option = from_dict(OptionB, d)
 
 @testset "options" begin
     @test option == OptionB(;
@@ -34,7 +34,7 @@ option = OptionB(d)
         float = 0.33,
     )
 
-    @test OptionB("option.toml") == option
+    @test from_toml(OptionB, "option.toml") == option
 end
 
 @testset "to_dict" begin

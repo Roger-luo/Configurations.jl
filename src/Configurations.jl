@@ -31,6 +31,15 @@ end
 dictionalize(x) = x
 is_option(x) = false
 
+function from_dict(::Type{T}, ::AbstractDict{String}) where T
+    error("$T is not an option type")
+end
+
+function from_toml(::Type{T}, filename::String) where T
+    is_option(T) || error("not an option type")
+    return from_dict(T, TOML.parsefile(filename))
+end
+
 function from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} = nothing; kw...) where T
     is_option(T) || error("not an option type")
     fnames = fieldnames(T)
@@ -51,7 +60,7 @@ function from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} 
         end
     end
 
-    return T(d)
+    return from_dict(T, d)
 end
 
 function from_kwargs(::Type{T}; kw...) where T
@@ -228,8 +237,8 @@ function codegen_from_dict(x::OptionDef)
     end
 
     def = Dict(
-        :name => x.name,
-        :args => [:($d::AbstractDict{String})],
+        :name => GlobalRef(Configurations, :from_dict),
+        :args => [:(::Type{<:$(x.name)}), :($d::AbstractDict{String})],
         :body => quote
             $validate
             $create
@@ -237,14 +246,6 @@ function codegen_from_dict(x::OptionDef)
     )
 
     return combinedef(def)
-end
-
-function codegen_from_toml(x::OptionDef)
-    return :(
-        function $(x.name)(filename::String)
-            $(x.name)($TOML.parsefile(filename))
-        end
-    )
 end
 
 function codegen_show_text(x::OptionDef)
@@ -296,7 +297,7 @@ function codegen_is_option(x::OptionDef)
 end
 
 function codegen_convert(x::OptionDef)
-    :(Base.convert(::Type{<:$(x.name)}, d::AbstractDict{String}) = $(x.name)(d))
+    :(Base.convert(::Type{<:$(x.name)}, d::AbstractDict{String}) = $from_dict($(x.name), d))
 end
 
 function option_m(@nospecialize(ex))
@@ -307,7 +308,6 @@ function option_m(@nospecialize(ex))
         Core.@__doc__ $(def.name)
         $(codegen_kw_fn(def))
         $(codegen_from_dict(def))
-        $(codegen_from_toml(def))
         $(codegen_convert(def))
         $(codegen_to_dict(def))
         $(codegen_show_text(def))
