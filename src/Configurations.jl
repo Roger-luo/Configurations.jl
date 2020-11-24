@@ -34,9 +34,9 @@ is_option(x) = false
 function from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} = nothing; kw...) where T
     is_option(T) || error("not an option type")
     fnames = fieldnames(T)
-    ftypes = fieldtypes(T)
 
-    for (name, type) in zip(fnames, ftypes)
+    for name in fnames
+        type = fieldtype(T, name)
         if prefix === nothing
             key = name
         else
