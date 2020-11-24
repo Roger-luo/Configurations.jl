@@ -252,6 +252,10 @@ function codegen_from_dict(x::OptionDef)
     return combinedef(def)
 end
 
+_print(io, m, x) = show(io, m, x)
+# inline printing arrays
+_print(io, m, x::AbstractArray) = show(io, x)
+
 function codegen_show_text(x::OptionDef)
     body = quote
         indent = get(io, :indent, 0)
@@ -260,7 +264,7 @@ function codegen_show_text(x::OptionDef)
 
     for each in x.fields
         push!(body.args, :( print(io, " "^(indent+4), $(LIGHT_BLUE_FG(string(each.name))), " = ") ))
-        push!(body.args, :( show(IOContext(io, :indent=>(indent+4)), m, x.$(each.name)) ))
+        push!(body.args, :( $_print(IOContext(io, :indent=>(indent+4)), m, x.$(each.name)) ))
         push!(body.args, :( println(io, ",") ))
     end
     
