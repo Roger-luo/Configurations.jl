@@ -1,6 +1,6 @@
 module Configurations
 
-export @option
+export @option, from_dict, from_kwargs, from_toml, to_dict, to_toml
 
 using OrderedCollections
 using MatchCore

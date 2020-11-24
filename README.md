@@ -28,7 +28,9 @@ different option/configuration file format, such as `TOML`, e.g
 
 You can easily create hierarchical struct types as following
 
-```julia-repl
+```julia
+julia> using Configurations
+
 julia> @option struct OptionA
            name::String
            int::Int = 1
@@ -50,7 +52,7 @@ Dict{String, Any} with 2 entries:
   "opt"   => Dict{String, Any}("int"=>2, "name"=>"Roger")
   "float" => 0.33
 
-julia> option = OptionB(d)
+julia> option = from_dict(OptionB, d)
 OptionB(;
   opt = OptionA(;
     name = "Roger",
@@ -60,11 +62,24 @@ OptionB(;
 )
 ```
 
-for option types you can always convert `AbstractDict` to a given option type,
-or convert them back to dictionary via `Options.to_dict`, e.g
+Or you can also create it from keyword arguments, e.g
 
 ```julia
-julia> Options.to_dict(option)
+julia> from_kwargs(OptionB; opt_name="Roger", opt_int=2, float=0.33)
+OptionB(;
+    opt = OptionA(;
+        name = "Roger",
+        int = 2,
+    ),
+    float = 0.33,
+)
+```
+
+for option types you can always convert `AbstractDict` to a given option type,
+or convert them back to dictionary via `to_dict`, e.g
+
+```julia
+julia> Configurations.to_dict(option)
 OrderedDict{String, Any} with 2 entries:
   "opt"   => OrderedDict{String, Any}("name"=>"Roger", "int"=>2)
   "float" => 0.33
@@ -73,7 +88,7 @@ OrderedDict{String, Any} with 2 entries:
 for serialization, you can use the builtin TOML support
 
 ```julia
-julia> Options.to_toml(option)
+julia> to_toml(option)
 "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
 ```
 
