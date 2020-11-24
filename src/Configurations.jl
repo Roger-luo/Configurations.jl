@@ -1,4 +1,4 @@
-module Options
+module Configurations
 
 export @option
 
@@ -252,7 +252,7 @@ function codegen_to_dict(x::OptionDef)
     end
 
     def = Dict(
-        :name => GlobalRef(Options, :dictionalize),
+        :name => GlobalRef(Configurations, :dictionalize),
         :args => [:(option::$(x.name))],
         :body => quote
             return $dict
@@ -262,7 +262,7 @@ function codegen_to_dict(x::OptionDef)
 end
 
 function codegen_is_option(x::OptionDef)
-    :($(GlobalRef(Options, :is_option))(::$(x.name)) = true)
+    :($(GlobalRef(Configurations, :is_option))(::$(x.name)) = true)
 end
 
 function codegen_convert(x::OptionDef)

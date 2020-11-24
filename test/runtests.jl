@@ -1,5 +1,4 @@
-using Options
-using Options: @option
+using Configurations
 using OrderedCollections
 using Test
 
@@ -38,7 +37,7 @@ option = OptionB(d)
 end
 
 @testset "to_dict" begin
-    @test_throws ErrorException Options.to_dict("aaa")
-    @test Options.to_dict(option) == d
-    @test Options.to_toml(option) == "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
+    @test_throws ErrorException Configurations.to_dict("aaa")
+    @test Configurations.to_dict(option) == d
+    @test Configurations.to_toml(option) == "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
 end
