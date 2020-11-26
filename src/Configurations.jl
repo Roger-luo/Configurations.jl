@@ -244,10 +244,10 @@ function codegen_from_dict(x::OptionDef)
         key = string(each.name)
         msg = "option $key is required"
         if each.default === no_default
-            push!(validate.args, :($haskey($d, $key) || $error($msg)))
+            push!(validate.args, :($(GlobalRef(Base, :haskey))($d, $key) || $(GlobalRef(Base, :error))($msg)))
             push!(create.args, :($d[$key]))
         else
-            push!(create.args, :($get($d, $key, $(each.default))))
+            push!(create.args, :($(GlobalRef(Base, :get))($d, $key, $(each.default))))
         end
     end
 
@@ -275,7 +275,7 @@ function codegen_show_text(x::OptionDef)
 
     for each in x.fields
         push!(body.args, :( print(io, " "^(indent+4), $(LIGHT_BLUE_FG(string(each.name))), " = ") ))
-        push!(body.args, :( $_print(IOContext(io, :indent=>(indent+4)), m, x.$(each.name)) ))
+        push!(body.args, :( $(GlobalRef(Configurations, :_print))(IOContext(io, :indent=>(indent+4)), m, x.$(each.name)) ))
         push!(body.args, :( println(io, ",") ))
     end
     
@@ -295,7 +295,7 @@ function codegen_to_dict(x::OptionDef)
 
     for each in x.fields
         key = string(each.name)
-        push!(dict.args, :($key => $dictionalize(option.$(each.name))))
+        push!(dict.args, :($key => $(GlobalRef(Configurations, :dictionalize))(option.$(each.name))))
     end
 
     def = Dict(
@@ -316,7 +316,7 @@ function codegen_is_option(x::OptionDef)
 end
 
 function codegen_convert(x::OptionDef)
-    :(Base.convert(::Type{<:$(x.name)}, d::AbstractDict{String}) = $from_dict($(x.name), d))
+    :(Base.convert(::Type{<:$(x.name)}, d::AbstractDict{String}) = $(GlobalRef(Configurations, :from_dict))($(x.name), d))
 end
 
 function option_m(@nospecialize(ex))
