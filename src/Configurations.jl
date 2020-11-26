@@ -86,6 +86,7 @@ struct OptionDef
     supertype
 
     fields::Vector{Field}
+    misc::Vector{Any}
 end
 
 function Base.show(io::IO, x::Field)
@@ -133,8 +134,8 @@ function OptionDef(@nospecialize(ex))
     ex.head === :struct || error("invalid usage of @option")
 
     name, parameters, supertype = split_name(ex)
-    fields = split_body(ex)
-    return OptionDef(name, ex.args[1], parameters, supertype, fields)
+    fields, misc = split_body(ex)
+    return OptionDef(name, ex.args[1], parameters, supertype, fields, misc)
 end
 
 function split_name(ex::Expr)
@@ -154,6 +155,7 @@ function split_body(ex::Expr)
     body.head === :block || error("expect a block, got $ex")
 
     fields = Field[]
+    misc = Any[]
     line = nothing
 
     for each in body.args
@@ -169,14 +171,19 @@ function split_body(ex::Expr)
             ::LineNumberNode => begin
                 line = each
             end
-            _ => error("invalid @option statement: $each")
+
+            _ => begin
+                push!(misc, line)
+                push!(misc, each)
+                nothing
+            end
         end
 
         if item isa Field
             push!(fields, item)
         end
     end
-    return fields
+    return fields, misc
 end
 
 function codegen_struct_def(x::OptionDef)
@@ -202,6 +209,10 @@ function codegen_struct_def(x::OptionDef)
             item = :($(each.name)::$(each.type))
         end
         push!(body.args, item)
+    end
+
+    for each in x.misc
+        push!(body.args, each)
     end
     return Expr(:struct, x.ismutable, T, body)
 end

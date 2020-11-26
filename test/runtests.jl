@@ -46,3 +46,16 @@ end
 @testset "from_kwargs" begin
     @test Configurations.from_kwargs(OptionB; opt_name="Roger", opt_int=2, float=0.33) == option
 end
+
+@option struct OptionC
+    num::Float64
+
+    function OptionC(num::Float64)
+        num > 0 || error("not positive")
+        new(num)
+    end
+end
+
+@testset "inside constructor" begin
+    @test_throws ErrorException OptionC(-1.0)
+end
