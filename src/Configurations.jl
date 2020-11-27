@@ -13,6 +13,14 @@ struct NoDefault end
 const no_default = NoDefault()
 const Maybe{T} = Union{Nothing, T}
 
+function field_defaults(::Type{T}) where T
+    error("$T is not an option type")
+end
+
+function alias(::Type{T}) where T
+    error("$T is not an option type")
+end
+
 """
     to_dict(option) -> OrderedDict
 
@@ -29,14 +37,74 @@ function to_toml(x)
 end
 
 dictionalize(x) = x
+
 is_option(x) = false
 
 function from_dict(::Type{T}, d::AbstractDict{String}) where T
-    return default_from_dict(T, d)
+    is_option(T) || error("$T is not an option type")
+    
+    for (name, default) in zip(fieldnames(T), field_defaults(T))
+        if default === no_default
+            haskey(d, string(name)) || error("$name is required")
+        end
+    end
+
+    return from_dict_inner(T, d)
 end
 
-function default_from_dict(::Type{T}, ::AbstractDict{String}) where T
-    error("$T is not an option type")
+function from_dict_inner(::Type{T}, x) where T
+    error("cannot convert $x to $T")
+end
+
+function assert_union_alias(::Type{T}, name=nothing) where T
+    T isa Union || return
+    name === nothing && return
+    name == alias(T.a) && error("duplicated alias name: $name")
+    return assert_union_alias(T.b, alias(T.a))
+end
+
+function pick_union(::Type{T}, d::AbstractDict{String}) where T
+    if !(T isa Union)
+        is_option(T) || return T, d
+        if haskey(d, alias(T))
+            return T, d[alias(T)]
+        else
+            return
+        end
+    end
+    
+    assert_union_alias(T)
+    if is_option(T.a) && alias(T.a) !== nothing && haskey(d, alias(T.a))
+        return T.a, d[alias(T.a)]
+    else
+        return pick_union(T.b, d)
+    end
+end
+
+function from_dict_inner(::Type{T}, d::AbstractDict{String}) where T
+    args = Any[]
+    for (each, default) in zip(fieldnames(T), field_defaults(T))
+        key = string(each)
+        type = fieldtype(T, each)
+
+        if type isa Union && haskey(d, key)
+            pick = pick_union(type, d[key])
+            pick === nothing && error("alias name for multi-option $type is required")
+            type, value = pick
+        elseif default === no_default
+            value = d[key]
+        else
+            value = get(d, key, default)
+        end
+
+        if is_option(type)
+            push!(args, from_dict_inner(type, value))
+        else
+            push!(args, value)
+        end
+    end
+
+    return T(args...)
 end
 
 function from_toml(::Type{T}, filename::String) where T
@@ -45,6 +113,12 @@ function from_toml(::Type{T}, filename::String) where T
 end
 
 function from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} = nothing; kw...) where T
+    if T isa Union
+        from_kwargs!(d, T.a, prefix; kw...)
+        from_kwargs!(d, T.b, prefix; kw...)
+        return d
+    end
+
     is_option(T) || error("not an option type")
     fnames = fieldnames(T)
 
@@ -63,13 +137,13 @@ function from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} 
             d[string(name)] = kw[key]
         end
     end
-
-    return from_dict(T, d)
+    return d
 end
 
 function from_kwargs(::Type{T}; kw...) where T
     d = OrderedDict{String, Any}()
-    return from_kwargs!(d, T; kw...)
+    from_kwargs!(d, T; kw...)
+    return from_dict(T, d)
 end
 
 struct Field
@@ -81,12 +155,22 @@ end
 
 struct OptionDef
     name::Symbol
+    alias::Union{Nothing, String}
     ismutable::Bool
     parameters::Vector{Any}
     supertype
 
     fields::Vector{Field}
     misc::Vector{Any}
+
+    function OptionDef(name, alias, ismutable, params, supertype, fields::Vector{Field}, misc)
+        for each in fields
+            if each.name == alias
+                error("fieldname is the same as alias name")
+            end
+        end
+        new(name, alias, ismutable, params, supertype, fields, misc)
+    end
 end
 
 function Base.show(io::IO, x::Field)
@@ -129,13 +213,13 @@ function Base.show(io::IO, x::OptionDef)
     print(io, " "^indent, BLUE_FG("end"))
 end
 
-function OptionDef(@nospecialize(ex))
+function OptionDef(@nospecialize(ex), alias=nothing)
     ex isa Expr || error("invalid usage of @option")
     ex.head === :struct || error("invalid usage of @option")
 
     name, parameters, supertype = split_name(ex)
     fields, misc = split_body(ex)
-    return OptionDef(name, ex.args[1], parameters, supertype, fields, misc)
+    return OptionDef(name, alias, ex.args[1], parameters, supertype, fields, misc)
 end
 
 function split_name(ex::Expr)
@@ -235,34 +319,6 @@ function codegen_kw_fn(x::OptionDef)
     return combinedef(def)
 end
 
-function codegen_from_dict(x::OptionDef)
-    d = gensym(:d)
-    validate = Expr(:block)
-    create = Expr(:call, x.name)
-    # check required fields
-    for each in x.fields
-        key = string(each.name)
-        msg = "option $key is required"
-        if each.default === no_default
-            push!(validate.args, :($(GlobalRef(Base, :haskey))($d, $key) || $(GlobalRef(Base, :error))($msg)))
-            push!(create.args, :($d[$key]))
-        else
-            push!(create.args, :($(GlobalRef(Base, :get))($d, $key, $(each.default))))
-        end
-    end
-
-    def = Dict(
-        :name => GlobalRef(Configurations, :default_from_dict),
-        :args => [:(::Type{<:$(x.name)}), :($d::AbstractDict{String})],
-        :body => quote
-            $validate
-            $create
-        end
-    )
-
-    return combinedef(def)
-end
-
 _print(io, m, x) = show(io, m, x)
 # inline printing arrays
 _print(io, m, x::AbstractArray) = show(io, x)
@@ -319,18 +375,43 @@ function codegen_convert(x::OptionDef)
     :(Base.convert(::Type{<:$(x.name)}, d::AbstractDict{String}) = $(GlobalRef(Configurations, :from_dict))($(x.name), d))
 end
 
-function option_m(@nospecialize(ex))
-    def = OptionDef(ex)
+function codegen_field_defaults(x::OptionDef)
+    defaults = Expr(:ref, Any)
+    for each in x.fields
+        push!(defaults.args, each.default)
+    end
+
+    def = Dict(
+        :name => GlobalRef(Configurations, :field_defaults),
+        :args => [:(::Type{<:$(x.name)})],
+        :body => defaults
+    )
+
+    return combinedef(def)
+end
+
+function codegen_alias(x::OptionDef)
+    def = Dict(
+        :name => GlobalRef(Configurations, :alias),
+        :args => [:(::Type{<:$(x.name)})],
+        :body => x.alias
+    )
+    return combinedef(def)
+end
+
+function option_m(@nospecialize(ex), alias=nothing)
+    def = OptionDef(ex, alias)
 
     quote
         $(codegen_struct_def(def))
         Core.@__doc__ $(def.name)
         $(codegen_kw_fn(def))
-        $(codegen_from_dict(def))
         $(codegen_convert(def))
         $(codegen_to_dict(def))
         $(codegen_show_text(def))
         $(codegen_is_option(def))
+        $(codegen_field_defaults(def))
+        $(codegen_alias(def))
         nothing
     end
 end
@@ -377,6 +458,10 @@ OptionB(;
 """
 macro option(ex)
     esc(option_m(ex))
+end
+
+macro option(alias::String, ex)
+    esc(option_m(ex, alias))
 end
 
 end

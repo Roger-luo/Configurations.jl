@@ -4,13 +4,13 @@ using OrderedCollections
 using Test
 
 "Option A"
-@option struct OptionA
+@option "option_a" struct OptionA
     name::String
     int::Int = 1
 end
 
 "Option B"
-@option struct OptionB
+@option "option_b" struct OptionB
     opt::OptionA = OptionA(;name = "Sam")
     float::Float64 = 0.3
 end
@@ -58,4 +58,40 @@ end
 
 @testset "inside constructor" begin
     @test_throws ErrorException OptionC(-1.0)
+end
+
+@option struct OptionD
+    opt::Union{OptionA, OptionB}
+end
+
+@testset "test multi option type" begin
+    d1 = OrderedDict{String, Any}(
+        "opt" => OrderedDict{String, Any}(
+            "option_b" => d
+        )
+    )
+
+    @test from_dict(OptionD, d1).opt isa OptionB
+
+    d2 = OrderedDict{String, Any}(
+        "opt" => OrderedDict{String, Any}(
+            "option_a" => OrderedDict{String, Any}(
+                "name" => "Roger",
+                "int" => 2,
+            ),
+        )
+    )
+
+    @test from_dict(OptionD, d2).opt isa OptionA
+
+    d3 = OrderedDict{String, Any}(
+        "opt" => OrderedDict{String, Any}(
+            OrderedDict{String, Any}(
+                "name" => "Roger",
+                "int" => 2,
+            ),
+        )
+    )
+
+    @test_throws ErrorException from_dict(OptionD, d3)
 end
