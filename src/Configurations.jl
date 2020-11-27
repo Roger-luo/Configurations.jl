@@ -42,7 +42,11 @@ is_option(x) = false
 
 function from_dict(::Type{T}, d::AbstractDict{String}) where T
     is_option(T) || error("$T is not an option type")
-    
+
+    for k in keys(d)
+        Symbol(k) in fieldnames(T) || error("invalid key: $k")
+    end
+
     for (name, default) in zip(fieldnames(T), field_defaults(T))
         if default === no_default
             haskey(d, string(name)) || error("$name is required")
@@ -156,7 +160,44 @@ function from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} 
     return d
 end
 
+function validate_keywords(::Type{T}; kw...) where T
+    ks = keywords(T)
+    hint = join(map(x->LIGHT_BLUE_FG(string(x)), ks), ", ")
+    for (k, v) in kw
+        k in ks || throw(ArgumentError("invalid key $(LIGHT_BLUE_FG(string(k))), possible keys are: $hint"))
+    end
+    return
+end
+
+keywords(::Type{T}) where T = collect_keywords!(Symbol[], T)
+
+function collect_keywords!(list::Vector{Symbol}, ::Type{T}, prefix::Maybe{Symbol} = nothing) where T
+    if T isa Union
+        collect_keywords!(list, T.a, prefix)
+        collect_keywords!(list, T.b, prefix)
+        return list
+    end
+
+    is_option(T) || return list
+    for name in fieldnames(T)
+        type = fieldtype(T, name)
+        if prefix === nothing
+            key = name
+        else
+            key = Symbol(prefix, :_, name)
+        end
+
+        if is_option(type) || type isa Union
+            collect_keywords!(list, type, key)
+        else
+            push!(list, key)
+        end
+    end
+    return list
+end
+
 function from_kwargs(::Type{T}; kw...) where T
+    validate_keywords(T; kw...)
     d = OrderedDict{String, Any}()
     from_kwargs!(d, T; kw...)
     return from_dict(T, d)

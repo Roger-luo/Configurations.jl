@@ -117,3 +117,9 @@ end
         field = nothing,
     )
 end
+
+@testset "validate keys" begin
+    @test_throws ArgumentError Configurations.validate_keywords(OptionA; abc=2)
+    @test Configurations.validate_keywords(OptionB; opt_name="AAA") === nothing
+    @test_throws ArgumentError Configurations.validate_keywords(OptionB; opt_abc="AAA")
+end
