@@ -86,19 +86,32 @@ function from_dict_inner(::Type{T}, d::AbstractDict{String}) where T
     for (each, default) in zip(fieldnames(T), field_defaults(T))
         key = string(each)
         type = fieldtype(T, each)
-
-        if type isa Union && haskey(d, key)
-            pick = pick_union(type, d[key])
-            pick === nothing && error("alias name for multi-option $type is required")
-            type, value = pick
-        elseif default === no_default
-            value = d[key]
+ 
+        if default === no_default
+            if type isa Union
+                pick = pick_union(type, d[key])
+                pick === nothing && error("alias name for multi-option $type is required")
+                type, value = pick
+            else
+                value = d[key]
+            end
         else
-            value = get(d, key, default)
+            if type isa Union && haskey(d, key)
+                pick = pick_union(type, d[key])
+            else
+                pick = nothing
+            end
+
+            if pick === nothing
+                value = get(d, key, default)
+            else
+                type, value = pick
+            end
         end
 
-        if is_option(type)
-            push!(args, from_dict_inner(type, value))
+        if is_option(type) && value isa AbstractDict{String}
+            # need some assertions so we call from_dict
+            push!(args, from_dict(type, value))
         else
             push!(args, value)
         end
@@ -119,7 +132,7 @@ function from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} 
         return d
     end
 
-    is_option(T) || error("not an option type")
+    is_option(T) || return
     fnames = fieldnames(T)
 
     for name in fnames
@@ -130,7 +143,7 @@ function from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} 
             key = Symbol(prefix, :_, name)
         end
 
-        if is_option(type)
+        if is_option(type) || type isa Union
             d[string(name)] = OrderedDict{String, Any}()
             from_kwargs!(d[string(name)], type, key; kw...)
         elseif haskey(kw, key)

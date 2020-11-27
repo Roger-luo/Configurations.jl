@@ -95,3 +95,17 @@ end
 
     @test_throws ErrorException from_dict(OptionD, d3)
 end
+
+@testset "optional field" begin
+    d = OrderedDict{String, Any}(
+        "float" => 0.33
+    )
+
+    @test from_dict(OptionB, d) == OptionB(;
+        opt = OptionA(;
+            name = "Sam",
+            int = 1,
+        ),
+        float = 0.33,
+    )
+end
