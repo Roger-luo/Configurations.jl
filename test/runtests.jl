@@ -123,3 +123,21 @@ end
     @test Configurations.validate_keywords(OptionB; opt_name="AAA") === nothing
     @test_throws ArgumentError Configurations.validate_keywords(OptionB; opt_abc="AAA")
 end
+
+@testset "dict override" begin
+    d = OrderedDict{String, Any}(
+        "opt" => OrderedDict{String, Any}(
+            "name" => "Roger",
+            "int" => 2,
+        ),
+        "float" => 0.33
+    )
+
+    @test from_dict(OptionB, d; opt_name = "AAA") == OptionB(;
+        opt = OptionA(;
+            name = "AAA",
+            int = 1,
+        ),
+        float = 0.33,
+    )
+end

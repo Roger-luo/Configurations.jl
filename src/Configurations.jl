@@ -40,7 +40,13 @@ dictionalize(x) = x
 
 is_option(x) = false
 
-function from_dict(::Type{T}, d::AbstractDict{String}) where T
+function from_dict(::Type{T}, d::AbstractDict{String}; kw...) where T
+    # override dict values
+    from_kwargs!(d, T; kw...)
+    return from_dict_validate(T, d)
+end
+
+function from_dict_validate(::Type{T}, d::AbstractDict{String}) where T
     is_option(T) || error("$T is not an option type")
 
     for k in keys(d)
@@ -115,7 +121,7 @@ function from_dict_inner(::Type{T}, d::AbstractDict{String}) where T
 
         if is_option(type) && value isa AbstractDict{String}
             # need some assertions so we call from_dict
-            push!(args, from_dict(type, value))
+            push!(args, from_dict_validate(type, value))
         else
             push!(args, value)
         end
@@ -124,9 +130,9 @@ function from_dict_inner(::Type{T}, d::AbstractDict{String}) where T
     return T(args...)
 end
 
-function from_toml(::Type{T}, filename::String) where T
+function from_toml(::Type{T}, filename::String; kw...) where T
     is_option(T) || error("not an option type")
-    return from_dict(T, TOML.parsefile(filename))
+    return from_dict(T, TOML.parsefile(filename); kw...)
 end
 
 function from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} = nothing; kw...) where T
@@ -200,7 +206,7 @@ function from_kwargs(::Type{T}; kw...) where T
     validate_keywords(T; kw...)
     d = OrderedDict{String, Any}()
     from_kwargs!(d, T; kw...)
-    return from_dict(T, d)
+    return from_dict_validate(T, d)
 end
 
 struct Field
