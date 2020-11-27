@@ -144,8 +144,11 @@ function from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} 
         end
 
         if is_option(type) || type isa Union
-            d[string(name)] = OrderedDict{String, Any}()
-            from_kwargs!(d[string(name)], type, key; kw...)
+            field_d = OrderedDict{String, Any}()
+            from_kwargs!(field_d, type, key; kw...)
+            if !isempty(field_d)
+                d[string(name)] = field_d
+            end
         elseif haskey(kw, key)
             d[string(name)] = kw[key]
         end

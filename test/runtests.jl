@@ -96,6 +96,10 @@ end
     @test_throws ErrorException from_dict(OptionD, d3)
 end
 
+@option struct OptionE
+    field::Union{Nothing, OptionA} = nothing
+end
+
 @testset "optional field" begin
     d = OrderedDict{String, Any}(
         "float" => 0.33
@@ -107,5 +111,9 @@ end
             int = 1,
         ),
         float = 0.33,
+    )
+
+    @test from_kwargs(OptionE) == OptionE(;
+        field = nothing,
     )
 end
