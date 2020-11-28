@@ -173,3 +173,9 @@ end
         ),
     )
 end
+
+@testset "to_dict nothing conversion" begin
+    d = to_dict(Julia())
+    @test haskey(d, "versions")
+    @test !haskey(d, "active")
+end

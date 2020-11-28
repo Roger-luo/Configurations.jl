@@ -36,7 +36,17 @@ function to_toml(x)
     return sprint(TOML.print, d)
 end
 
-dictionalize(x) = x
+function dictionalize(x)
+    is_option(x) || return x
+    d = OrderedDict{String, Any}()
+    for name in fieldnames(typeof(x))
+        value = dictionalize(getfield(x, name))
+        if value !== nothing
+            d[string(name)] = value
+        end
+    end
+    return d
+end
 
 is_option(x) = false
 
@@ -426,24 +436,6 @@ function codegen_show_text(x::OptionDef)
     return combinedef(def)
 end
 
-function codegen_to_dict(x::OptionDef)
-    dict = Expr(:call, :($OrderedDict{String, Any}))
-
-    for each in x.fields
-        key = string(each.name)
-        push!(dict.args, :($key => $(GlobalRef(Configurations, :dictionalize))(option.$(each.name))))
-    end
-
-    def = Dict(
-        :name => GlobalRef(Configurations, :dictionalize),
-        :args => [:(option::$(x.name))],
-        :body => quote
-            return $dict
-        end,
-    )
-    return combinedef(def)
-end
-
 function codegen_is_option(x::OptionDef)
     quote
         $(GlobalRef(Configurations, :is_option))(::$(x.name)) = true
@@ -500,7 +492,6 @@ function option_m(@nospecialize(ex), alias=nothing)
         Core.@__doc__ $(def.name)
         $(codegen_kw_fn(def))
         $(codegen_convert(def))
-        $(codegen_to_dict(def))
         $(codegen_show_text(def))
         $(codegen_is_option(def))
         $(codegen_field_defaults(def))
