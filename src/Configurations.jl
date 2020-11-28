@@ -388,6 +388,7 @@ end
 
 _print(io, m, x) = show(io, m, x)
 # inline printing arrays
+_print(io, m, x::AbstractDict) = show(io, x)
 _print(io, m, x::AbstractArray) = show(io, x)
 
 function codegen_show_text(x::OptionDef)
@@ -466,6 +467,19 @@ function codegen_alias(x::OptionDef)
     return combinedef(def)
 end
 
+compare_options(a, b) = false
+
+function compare_options(a::A, b::A) where {A}
+    for each in fieldnames(A)
+        getfield(a, each) == getfield(b, each) || return false
+    end
+    return true
+end
+
+function codegen_isequal(x::OptionDef)
+    return :(Base.:(==)(a::$(x.name), b::$(x.name)) = $compare_options(a, b))
+end
+
 function option_m(@nospecialize(ex), alias=nothing)
     def = OptionDef(ex, alias)
 
@@ -479,6 +493,7 @@ function option_m(@nospecialize(ex), alias=nothing)
         $(codegen_is_option(def))
         $(codegen_field_defaults(def))
         $(codegen_alias(def))
+        $(codegen_isequal(def))
         nothing
     end
 end

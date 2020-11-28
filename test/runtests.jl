@@ -141,3 +141,35 @@ end
         float = 0.33,
     )
 end
+
+@option mutable struct Julia
+    active::Union{String, Nothing} = nothing
+    stable::Union{String, Nothing} = nothing
+    # NOTE: we store nightly here too
+    versions::Dict{String, String} = Dict{String, String}()
+end
+
+@option mutable struct Ion
+    julia::Julia = Julia()
+end
+
+@testset "non-dict value conversion" begin
+    d = Dict{String, Any}(
+        "julia" => Dict{String, Any}(
+            "active" => "some/path/to/active",
+            "stable" => "1.5.3",
+            "versions" => Dict{String, String}(
+                "1.5.3" => "some/path/to/1.5.3",
+                "nightly" => "some/path/to/nightly",
+            )
+        ),
+    )
+
+    @test from_dict(Ion, d) == Ion(;
+        julia = Julia(;
+            active = "some/path/to/active",
+            stable = "1.5.3",
+            versions = Dict("1.5.3" => "some/path/to/1.5.3", "nightly" => "some/path/to/nightly"),
+        ),
+    )
+end
