@@ -13,6 +13,11 @@ struct NoDefault end
 const no_default = NoDefault()
 const Maybe{T} = Union{Nothing, T}
 
+"""
+    field_defaults(::Type)
+
+Return default values of given option types.
+"""
 function field_defaults(::Type{T}) where T
     error("$T is not an option type")
 end
@@ -39,11 +44,21 @@ function to_dict(x)
     return dictionalize(x)
 end
 
+"""
+    to_toml(x)
+
+Convert an option to TOML string.
+"""
 function to_toml(x)
     d = to_dict(x)
     return sprint(TOML.print, d)
 end
 
+"""
+    dictionalize(x)
+
+Convert `x` to an `OrderedDict`.
+"""
 function dictionalize(x)
     is_option(x) || return x
     d = OrderedDict{String, Any}()
@@ -56,8 +71,39 @@ function dictionalize(x)
     return d
 end
 
+"""
+    is_option(x)
+
+Check if `x` is an option type or not.
+"""
 is_option(x) = false
 
+"""
+    from_dict(::Type{T}, d::AbstractDict{String}; kw...) where T
+
+Convert dictionary `d` to an option type `T`, the valud of valid fields of `T`
+in this dictionary `d` can be override by keyword arguments.
+
+# Example
+
+```julia-repl
+julia> @option struct OptionA
+           name::String = "Sam"
+           age::Int = 25
+       end
+
+julia> d = Dict{String, Any}(
+           "name" => "Roger",
+           "age" => 10,
+       );
+
+julia> from_dict(OptionA, d; age=25)
+OptionA(;
+    name = "Roger",
+    age = 25,
+)
+```
+"""
 function from_dict(::Type{T}, d::AbstractDict{String}; kw...) where T
     # override dict values
     validate_keywords(T; kw...)
@@ -152,6 +198,12 @@ function from_dict_inner(::Type{T}, d::AbstractDict{String}) where T
     return T(args...)
 end
 
+"""
+    from_toml(::Type{T}, filename::String; kw...) where T
+
+Convert a given TOML file `filename` to an option type `T`. Valid fields
+can be override by keyword arguments. See also [`from_dict`](@ref).
+"""
 function from_toml(::Type{T}, filename::String; kw...) where T
     is_option(T) || error("not an option type")
     return from_dict(T, TOML.parsefile(filename); kw...)
@@ -224,6 +276,11 @@ function collect_keywords!(list::Vector{Symbol}, ::Type{T}, prefix::Maybe{Symbol
     return list
 end
 
+"""
+    from_kwargs(::Type{T}; kw...) where T
+
+Convert keyword arguments to given option type `T`. See also [`from_dict`](@ref).
+"""
 function from_kwargs(::Type{T}; kw...) where T
     validate_keywords(T; kw...)
     d = OrderedDict{String, Any}()
@@ -510,42 +567,74 @@ function option_m(@nospecialize(ex), alias=nothing)
 end
 
 """
-    @option <struct def>
+    @option [alias::String] <struct def>
 
 Define an option struct type. This will auto-generate methods that parse a given `Dict{String}`
-object (the keys must be of type `String`) into an instance of the struct type you defined.
+object (the keys must be of type `String`) into an instance of the struct type you defined. One
+can use `alias` string to distinguish multiple possible option type for the same field.
 
 # Example
 
-```julia
-julia> @option struct OptionA
+One can define option type via `@option` macro with or without an alias.
+
+```julia-repl
+julia> "Option A"
+       @option "option_a" struct OptionA
            name::String
            int::Int = 1
        end
 
-julia> @option struct OptionB
+julia> "Option B"
+       @option "option_b" struct OptionB
            opt::OptionA = OptionA(;name = "Sam")
            float::Float64 = 0.3
        end
+```
 
-julia> d = Dict(
-           "opt" => Dict(
+and convert a dict to an option type via [`from_dict`](@ref).
+
+```julia-repl
+julia> d = Dict{String, Any}(
+           "opt" => Dict{String, Any}(
                "name" => "Roger",
                "int" => 2,
            ),
            "float" => 0.33
-       )
-Dict{String, Any} with 2 entries:
-  "opt"   => Dict{String, Any}("int"=>2, "name"=>"Roger")
-  "float" => 0.33
+       );
 
-julia> OptionB(d)
+julia> option = from_dict(OptionB, d)
 OptionB(;
-  opt = OptionA(;
-    name = "Roger",
-    int = 2,
-  ),
-  float = 0.33,
+    opt = OptionA(;
+        name = "Roger",
+        int = 2,
+    ),
+    float = 0.33,
+)
+```
+
+when there are multiple possible option type for one field,
+one can use the alias to distinguish them
+
+```julia-repl
+julia> @option struct OptionD
+           opt::Union{OptionA, OptionB}
+       end
+
+julia> d1 = Dict{String, Any}(
+               "opt" => Dict{String, Any}(
+                   "option_b" => d
+               )
+           );
+
+julia> from_dict(OptionD, d1)
+OptionD(;
+    opt = OptionB(;
+        opt = OptionA(;
+            name = "Roger",
+            int = 2,
+        ),
+        float = 0.33,
+    ),
 )
 ```
 """
