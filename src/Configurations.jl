@@ -74,6 +74,9 @@ function assert_union_alias(::Type{T}, name=nothing) where T
     return assert_union_alias(T.b, alias(T.a))
 end
 
+# we don't process other kind of value
+pick_union(::Type{T}, x) where T = T, x
+
 function pick_union(::Type{T}, d::AbstractDict{String}) where T
     if !(T isa Union)
         is_option(T) || return T, d
