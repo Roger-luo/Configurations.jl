@@ -386,10 +386,22 @@ function codegen_kw_fn(x::OptionDef)
     return combinedef(def)
 end
 
-_print(io, m, x) = show(io, m, x)
+option_print(io::IO, m::MIME, x) = show(io, m, x)
+option_print(io::IO, ::MIME, x::AbstractDict) = show(io, x)
+
+function option_print(io::IO, m::MIME"text/plain", x::AbstractDict{String})
+    indent = get(io, :indent, 0)
+    println(io, typeof(x), "(")
+    for (k, v) in x
+        print(io, " "^(indent+4), LIGHT_BLUE_FG("\"", k, "\""), " => ")
+        option_print(IOContext(io, :indent=>(indent+4)), m, v)
+        println(io, ",")
+    end
+    print(io, " "^indent, ")")
+end
+
 # inline printing arrays
-_print(io, m, x::AbstractDict) = show(io, x)
-_print(io, m, x::AbstractArray) = show(io, x)
+option_print(io::IO, ::MIME, x::AbstractArray) = show(io, x)
 
 function codegen_show_text(x::OptionDef)
     body = quote
@@ -399,7 +411,7 @@ function codegen_show_text(x::OptionDef)
 
     for each in x.fields
         push!(body.args, :( print(io, " "^(indent+4), $(LIGHT_BLUE_FG(string(each.name))), " = ") ))
-        push!(body.args, :( $(GlobalRef(Configurations, :_print))(IOContext(io, :indent=>(indent+4)), m, x.$(each.name)) ))
+        push!(body.args, :( $(GlobalRef(Configurations, :option_print))(IOContext(io, :indent=>(indent+4)), m, x.$(each.name)) ))
         push!(body.args, :( println(io, ",") ))
     end
     
