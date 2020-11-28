@@ -22,6 +22,14 @@ function alias(::Type{T}) where T
 end
 
 """
+    option_convert(::Type{OptionType}, ::Type{ValueType}, x) where {OptionType, ValueType}
+
+Convert `x` to type `ValueType` for option type `OptionType`. This is similar to `Base.convert`,
+but one can use this to avoid type piracy.
+"""
+option_convert(::Type, ::Type{A}, x) where {A} = convert(A, x)
+
+"""
     to_dict(option) -> OrderedDict
 
 Convert an option to an `OrderedDict`.
@@ -134,10 +142,10 @@ function from_dict_inner(::Type{T}, d::AbstractDict{String}) where T
         end
 
         if is_option(type) && value isa AbstractDict{String}
-            # need some assertions so we call from_dict
+            # need some assertions so we call from_dict_validate
             push!(args, from_dict_validate(type, value))
         else
-            push!(args, value)
+            push!(args, option_convert(T, type, value))
         end
     end
 

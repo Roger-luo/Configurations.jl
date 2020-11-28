@@ -1,22 +1,22 @@
 name = "Configurations"
 uuid = "5218b696-f38b-4ac9-8b61-a12ec717816d"
 authors = ["Roger-luo <rogerluo.rl18@gmail.com> and contributors"]
-version = "0.2.2"
+version = "0.3.0"
 
 [deps]
-OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
-MatchCore = "5dd3f0b1-72a9-48ad-ae6e-79f673da005f"
-ExprTools = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
-TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 Crayons = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
+ExprTools = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
+MatchCore = "5dd3f0b1-72a9-48ad-ae6e-79f673da005f"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
-julia = "1"
-OrderedCollections = "1.3"
-MatchCore = "0.1"
-ExprTools = "0.1"
-TOML = "1"
 Crayons = "4.0"
+ExprTools = "0.1"
+MatchCore = "0.1"
+OrderedCollections = "1.3"
+TOML = "1"
+julia = "1"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

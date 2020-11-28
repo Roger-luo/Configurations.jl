@@ -146,7 +146,7 @@ end
     active::Union{String, Nothing} = nothing
     stable::Union{String, Nothing} = nothing
     # NOTE: we store nightly here too
-    versions::Dict{String, String} = Dict{String, String}()
+    versions::Dict{VersionNumber, String} = Dict{VersionNumber, String}()
 end
 
 @option mutable struct Ion
@@ -160,16 +160,25 @@ end
             "stable" => "1.5.3",
             "versions" => Dict{String, String}(
                 "1.5.3" => "some/path/to/1.5.3",
-                "nightly" => "some/path/to/nightly",
             )
         ),
     )
+
+    @test_throws MethodError from_dict(Ion, d)
+
+    function Configurations.option_convert(::Type{Julia}, ::Type{Dict{VersionNumber,String}}, x::Dict{String,String})
+        d = Dict{VersionNumber, String}()
+        for (k, v) in x
+            d[VersionNumber(k)] = v
+        end
+        return d
+    end
 
     @test from_dict(Ion, d) == Ion(;
         julia = Julia(;
             active = "some/path/to/active",
             stable = "1.5.3",
-            versions = Dict("1.5.3" => "some/path/to/1.5.3", "nightly" => "some/path/to/nightly"),
+            versions = Dict(v"1.5.3" => "some/path/to/1.5.3"),
         ),
     )
 end
