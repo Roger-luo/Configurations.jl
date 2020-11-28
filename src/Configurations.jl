@@ -549,6 +549,14 @@ function codegen_isequal(x::OptionDef)
     return :(Base.:(==)(a::$(x.name), b::$(x.name)) = $compare_options(a, b))
 end
 
+function codegen_show_toml_mime(x::OptionDef)
+    :(
+        function Base.show(io::IO, ::MIME"application/toml", x::$(x.name))
+            return print(io, to_toml(x))
+        end
+    )
+end
+
 function option_m(@nospecialize(ex), alias=nothing)
     def = OptionDef(ex, alias)
 
@@ -562,6 +570,7 @@ function option_m(@nospecialize(ex), alias=nothing)
         $(codegen_field_defaults(def))
         $(codegen_alias(def))
         $(codegen_isequal(def))
+        $(codegen_show_toml_mime(def))
         nothing
     end
 end
