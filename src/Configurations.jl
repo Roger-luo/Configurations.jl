@@ -45,13 +45,36 @@ function to_dict(x)
 end
 
 """
-    to_toml(x)
+    to_toml(x; sorted=false, by=identity)
 
-Convert an option to TOML string.
+Convert an instance `x` of option type to TOML and write it to `String`. See also `TOML.print`.
 """
-function to_toml(x)
-    d = to_dict(x)
-    return sprint(TOML.print, d)
+function to_toml(x; sorted=false, by=identity)
+    return sprint(to_toml, x)
+end
+
+function to_toml(io, x; sorted=false, by=identity)
+    return to_toml(identity, io, x; sorted=sorted, by=by)
+end
+
+"""
+    to_toml([to_toml::Function], filename::String, option; sorted=false, by=identity)
+
+Convert an instance `option` of option type to TOML and write it to `filename`. See also `TOML.print`.
+"""
+function to_toml(f, filename::String, x; sorted=false, by=identity)
+    open(filename, "w+") do io
+        to_toml(f, io, x; sorted=sorted, by=by)
+    end
+end
+
+"""
+    to_toml([to_toml::Function], io::IO [=stdout], option; sorted=false, by=identity)
+
+Convert an instance `option` of option type to TOML and write it to `IO`. See also `TOML.print`.
+"""
+function to_toml(f, io::IO, x; sorted=false, by=identity)
+    return TOML.print(f, io, to_dict(x); sorted=sorted, by=by)
 end
 
 """
