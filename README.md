@@ -29,6 +29,66 @@ different option/configuration file format, such as `TOML`, e.g
 You can easily create hierarchical struct types as following
 
 ```julia
+julia> "Option A"
+       @option "option_a" struct OptionA
+           name::String
+           int::Int = 1
+       end
+
+julia> "Option B"
+       @option "option_b" struct OptionB
+           opt::OptionA = OptionA(;name = "Sam")
+           float::Float64 = 0.3
+       end
+```
+
+and convert a dict to an option type via [`from_dict`](@ref).
+
+```julia
+julia> d = Dict{String, Any}(
+           "opt" => Dict{String, Any}(
+               "name" => "Roger",
+               "int" => 2,
+           ),
+           "float" => 0.33
+       );
+
+julia> option = from_dict(OptionB, d)
+OptionB(;
+    opt = OptionA(;
+        name = "Roger",
+        int = 2,
+    ),
+    float = 0.33,
+)
+```
+
+when there are multiple possible option type for one field,
+one can use the alias to distinguish them
+
+```julia
+julia> @option struct OptionD
+           opt::Union{OptionA, OptionB}
+       end
+
+julia> d1 = Dict{String, Any}(
+               "opt" => Dict{String, Any}(
+                   "option_b" => d
+               )
+           );
+
+julia> from_dict(OptionD, d1)
+OptionD(;
+    opt = OptionB(;
+        opt = OptionA(;
+            name = "Roger",
+            int = 2,
+        ),
+        float = 0.33,
+    ),
+)
+
+```julia
 julia> using Configurations
 
 julia> @option struct OptionA
