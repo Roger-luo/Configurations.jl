@@ -467,6 +467,7 @@ function codegen_struct_def(x::OptionDef)
 end
 
 function codegen_kw_fn(x::OptionDef)
+    isempty(x.fields) && return :()
     kwargs = []
     for each in x.fields
         if each.default === no_default
