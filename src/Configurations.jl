@@ -10,7 +10,10 @@ using TOML
 
 struct NoDefault end
 
+"const for non default fields"
 const no_default = NoDefault()
+
+"maybe of type `T` or nothing"
 const Maybe{T} = Union{Nothing, T}
 
 """
@@ -162,6 +165,13 @@ function assert_union_alias(::Type{T}, name=nothing) where T
 end
 
 # we don't process other kind of value
+"""
+    pick_union(::Type, x) -> type, value
+
+Pick a type `T` and its corresponding value from a `Union`. For option
+types it should be a dictionary type. The value can be furthur converted
+to this type `T` via [`option_convert`](@ref) or `Base.convert`.
+"""
 pick_union(::Type{T}, x) where T = T, x
 
 function pick_union(::Type{T}, d::AbstractDict{String}) where T
@@ -182,6 +192,14 @@ function pick_union(::Type{T}, d::AbstractDict{String}) where T
     end
 end
 
+"""
+    from_dict_inner(::Type{T}, d::AbstractDict{String}) where T
+
+Internal method to convert a dictionary (subtype of `AbstractDict`)
+to type `T`, this method will not check if `T` is an option type
+via `is_option`, and will not validate if all the required fields
+are available in the dict object.
+"""
 function from_dict_inner(::Type{T}, d::AbstractDict{String}) where T
     args = Any[]
     for (each, default) in zip(fieldnames(T), field_defaults(T))
@@ -232,6 +250,12 @@ function from_toml(::Type{T}, filename::String; kw...) where T
     return from_dict(T, TOML.parsefile(filename); kw...)
 end
 
+"""
+    from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} = nothing; kw...) where T
+
+Internal method for inserting keyword arguments to given dictionary object `d`. It will overwrite
+existing keys in `d` if it is specified by keyword argument.
+"""
 function from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} = nothing; kw...) where T
     if T isa Union
         from_kwargs!(d, T.a, prefix; kw...)
@@ -272,6 +296,11 @@ function validate_keywords(::Type{T}; kw...) where T
     return
 end
 
+"""
+    keywords(::Type{T}) where T -> Vector{Symbol}
+
+Get all the keywords of type `T`.
+"""
 keywords(::Type{T}) where T = collect_keywords!(Symbol[], T)
 
 function collect_keywords!(list::Vector{Symbol}, ::Type{T}, prefix::Maybe{Symbol} = nothing) where T
@@ -311,6 +340,11 @@ function from_kwargs(::Type{T}; kw...) where T
     return from_dict_validate(T, d)
 end
 
+"""
+    Field
+
+Type to represent a field definition in option type.
+"""
 struct Field
     name::Symbol
     type::Any
@@ -318,6 +352,11 @@ struct Field
     line
 end
 
+"""
+    OptionDef
+
+Type to represent the option type definition.
+"""
 struct OptionDef
     name::Symbol
     alias::Union{Nothing, String}
@@ -387,18 +426,29 @@ function OptionDef(@nospecialize(ex), alias=nothing)
     return OptionDef(name, alias, ex.args[1], parameters, supertype, fields, misc)
 end
 
+"""
+    split_name(ex::Expr) -> name, typevars, supertype
+
+Split the name, type parameters and supertype definition from `struct`
+declaration head.
+"""
 function split_name(ex::Expr)
     T = ex.args[2]
 
     return @smatch T begin
-        :($name{$(params...)}) => (name, params, nothing)
-        :($name{$(params...)} <: $type) => (name, params, type)
+        :($name{$(typevars...)}) => (name, typevars, nothing)
+        :($name{$(typevars...)} <: $type) => (name, typevars, type)
         ::Symbol => (T, [], nothing)
         :($name <: $type) => (name, [], type)
         _ => error("invalid @option: $ex")
     end
 end
 
+"""
+    split_body(ex::Expr) -> fields::Vector{Field}, misc::Vector{Any}
+
+Split the fields of option type declaration and misc (such as inner constructors etc.).
+"""
 function split_body(ex::Expr)
     body = ex.args[3]
     body.head === :block || error("expect a block, got $ex")
@@ -560,6 +610,16 @@ function codegen_alias(x::OptionDef)
     return combinedef(def)
 end
 
+"""
+    compare_options(a, b, xs...)::Bool
+
+Compare option types check if they are the same.
+"""
+function compare_options(a, b, xs...)::Bool
+    compare_options(a, b) || return false
+    compare_options(b, xs...)
+end
+
 compare_options(a, b) = false
 
 function compare_options(a::A, b::A) where {A}
@@ -581,9 +641,10 @@ function codegen_show_toml_mime(x::OptionDef)
     )
 end
 
-function option_m(@nospecialize(ex), alias=nothing)
-    def = OptionDef(ex, alias)
-
+"""
+generate Julia AST from `OptionDef`.
+"""
+function codegen(def::OptionDef)
     quote
         $(codegen_struct_def(def))
         Core.@__doc__ $(def.name)
@@ -595,6 +656,14 @@ function option_m(@nospecialize(ex), alias=nothing)
         $(codegen_alias(def))
         $(codegen_isequal(def))
         $(codegen_show_toml_mime(def))
+    end
+end
+
+function option_m(@nospecialize(ex), alias=nothing)
+    def = OptionDef(ex, alias)
+
+    quote
+        $(codegen(def))
         nothing
     end
 end
