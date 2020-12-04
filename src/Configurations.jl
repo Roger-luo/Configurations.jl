@@ -435,6 +435,27 @@ function OptionDef(@nospecialize(ex), alias=nothing)
     return OptionDef(name, alias, ex.args[1], parameters, supertype, fields, misc)
 end
 
+function has_custom_kw_fn(def::OptionDef)
+    return has_custom_kw_fn(def.misc)
+end
+
+function has_custom_kw_fn(misc::Vector{Any})
+    for each in misc
+        is_kw_fn(each) && return true
+    end
+    return false
+end
+
+is_kw_fn(x) = false
+
+# TODO: implement this directly without splitdef
+function is_kw_fn(ex::Expr)
+    def = splitdef(ex; throw=false)
+    def === nothing && return false
+    haskey(def, :args) && return false
+    return haskey(def, :kwargs)
+end
+
 """
     split_name(ex::Expr) -> name, typevars, supertype
 
@@ -472,7 +493,7 @@ function split_body(ex::Expr)
 
             :($name::$type) => Field(name, type, no_default, line)
 
-            :($name = $default) => Field(name, Any, default, line)
+            Expr(:(=), name::Symbol, default) => Field(name, Any, default, line)
 
             ::Symbol => Field(each, Any, no_default, line)
 
@@ -565,6 +586,7 @@ end
 
 function codegen_kw_fn(x::OptionDef)
     isempty(x.fields) && return
+    has_custom_kw_fn(x) && return
     kwargs = []
     for each in x.fields
         if each.default === no_default

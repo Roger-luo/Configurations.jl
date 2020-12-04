@@ -247,3 +247,18 @@ end
 @testset "emptry struct" begin
     @test_throws ErrorException field_default(Empty, :name)
 end
+
+@option struct CustomKwFn
+    a::Float64
+
+    CustomKwFn(a) = new(a)
+
+    function CustomKwFn(; a = 1.0, b = 2.0)
+        @test b == 2.0
+        new(a)
+    end
+end
+
+@testset "custom kwfn" begin
+    @test CustomKwFn() == CustomKwFn(1.0)    
+end
