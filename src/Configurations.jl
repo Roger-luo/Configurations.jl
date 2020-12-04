@@ -25,6 +25,15 @@ function field_defaults(::Type{T}) where T
     error("$T is not an option type")
 end
 
+"""
+    field_default(::Type{T}, name::Symbol)
+
+Return the default value of field `name` of an option type `T`.
+"""
+function field_default(::Type{T}, name::Symbol) where {T}
+    error("$T is not an option type")
+end
+
 function alias(::Type{T}) where T
     error("$T is not an option type")
 end
@@ -648,7 +657,13 @@ function codegen(def::OptionDef)
     quote
         $(codegen_struct_def(def))
         Core.@__doc__ $(def.name)
-        $(codegen_kw_fn(def))
+        # NOTE: we don't generate this by default
+        # since there can be inference issue for
+        # parameterized types where users would
+        # like to define the methods themselves
+        # besides we have from_kwargs function
+        # already
+        # $(codegen_kw_fn(def))
         $(codegen_convert(def))
         $(codegen_show_text(def))
         $(codegen_is_option(def))
