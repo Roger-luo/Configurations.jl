@@ -584,17 +584,22 @@ function typevars_can_be_inferred(def::OptionDef)
     field_has_typevars(def) && !default_depends_on_typevars(def)
 end
 
-function codegen_kw_fn(x::OptionDef)
-    isempty(x.fields) && return
-    has_custom_kw_fn(x) && return
+function get_kw_expr(def::OptionDef)
     kwargs = []
-    for each in x.fields
+    for each in def.fields
         if each.default === no_default
             push!(kwargs, each.name)
         else
             push!(kwargs, Expr(:kw, each.name, each.default))
         end
     end
+    return kwargs
+end
+
+function codegen_kw_fn(x::OptionDef)
+    isempty(x.fields) && return
+    has_custom_kw_fn(x) && return
+    kwargs = get_kw_expr(x)
 
     def = Dict(
             :name => x.name,
@@ -750,6 +755,28 @@ function codegen_alias(x::OptionDef)
 end
 
 """
+    create(::Type{T}; kwargs...) where T
+    
+Create an instance of option type `T` from `kwargs`. Similar
+to the default keyword argument constructor, but one can use this to create
+custom keyword argument constructor with extra custom keywords.
+"""
+function create(::Type{T}; kwargs...) where T
+    error("$T is not an option type")
+end
+
+function codegen_create(x::OptionDef)
+    def = Dict(
+        :name => GlobalRef(Configurations, :create),
+        :args => [:(::Type{T})],
+        :kwargs => get_kw_expr(x),
+        :whereparams => [:(T <: $(x.name))],
+        :body => Expr(:call, :T, [each.name for each in x.fields]...)
+    )
+    return combinedef(def)
+end
+
+"""
     compare_options(a, b, xs...)::Bool
 
 Compare option types check if they are the same.
@@ -796,6 +823,7 @@ function codegen(def::OptionDef)
         $(codegen_alias(def))
         $(codegen_isequal(def))
         $(codegen_show_toml_mime(def))
+        $(codegen_create(def))
     end
 end
 

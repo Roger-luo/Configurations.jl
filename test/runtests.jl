@@ -262,3 +262,18 @@ end
 @testset "custom kwfn" begin
     @test CustomKwFn() == CustomKwFn(1.0)    
 end
+
+@option struct ExtraKwFn
+    a::Int = 2
+
+    ExtraKwFn(a) = new(a)
+
+    function ExtraKwFn(; extra=true, kwargs...)
+        @test extra
+        return Configurations.create(ExtraKwFn; kwargs...)
+    end
+end
+
+@testset "kwargs forward" begin
+    @test ExtraKwFn(;a = 3) == ExtraKwFn(3)    
+end
