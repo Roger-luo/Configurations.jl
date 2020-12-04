@@ -277,3 +277,12 @@ end
 @testset "kwargs forward" begin
     @test ExtraKwFn(;a = 3) == ExtraKwFn(3)    
 end
+
+@option struct DefaultResolve
+    a::Int = 1
+    b::Float64 = sin(a)
+end
+
+@testset "default resolve" begin
+    @test field_default(DefaultResolve, :b) == sin(1)    
+end

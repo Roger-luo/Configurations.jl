@@ -22,7 +22,8 @@ const Maybe{T} = Union{Nothing, T}
 Return default values of given option types.
 """
 function field_defaults(::Type{T}) where T
-    error("$T is not an option type")
+    is_option(T) || error("$T is not an option type")
+    return Any[field_default(T, each) for each in fieldnames(T)]
 end
 
 """
@@ -634,8 +635,9 @@ option_print(io::IO, m::MIME, x) = show(io, m, x)
 option_print(io::IO, ::MIME, x::AbstractDict) = show(io, x)
 
 function option_print(io::IO, m::MIME"text/plain", x::AbstractDict{String})
+    head_indent = get(io, :head_indent, 0)
     indent = get(io, :indent, 0)
-    println(io, typeof(x), "(")
+    println(io, " "^head_indent, typeof(x), "(")
     for (k, v) in x
         print(io, " "^(indent+4), LIGHT_BLUE_FG("\"", k, "\""), " => ")
         option_print(IOContext(io, :indent=>(indent+4)), m, v)
@@ -647,25 +649,72 @@ end
 # inline printing arrays
 option_print(io::IO, ::MIME, x::AbstractArray) = show(io, x)
 
+function option_print(io::IO, m::MIME, list::Vector)
+    if !(any(is_option, list) || length(list) > 4)
+        return show(io, list)
+    end
+
+    head_indent = get(io, :head_indent, 0)
+    indent = get(io, :indent, 0)
+    println(io, " "^head_indent, "[")
+    inner_io = IOContext(io, :indent=>indent+4, :head_indent=>indent+4)
+    for each in list
+        if is_option(each)
+            show(inner_io, m, each)
+        else # inline
+            show(inner_io, each)
+        end
+
+        if length(list) > 1
+            println(io, ", ")
+        end
+    end
+    print(io, " "^(indent), "]")
+end
+
 function codegen_show_text(x::OptionDef)
     body = quote
+        head_indent = get(io, :head_indent, 0)
         indent = get(io, :indent, 0)
-        println(io, $GREEN_FG(summary(x)), "(;")
+        println(io, " "^head_indent, $GREEN_FG(summary(x)), "(;")
     end
 
     for each in x.fields
-        push!(body.args, :( print(io, " "^(indent+4), $(LIGHT_BLUE_FG(string(each.name))), " = ") ))
-        push!(body.args, :( $(GlobalRef(Configurations, :option_print))(IOContext(io, :indent=>(indent+4)), m, x.$(each.name)) ))
-        push!(body.args, :( println(io, ",") ))
+        print_ex = quote
+            print(io, " "^(indent+4), $(LIGHT_BLUE_FG(string(each.name))), " = ")
+            $(GlobalRef(Configurations, :option_print))(IOContext(io, :indent=>(indent+4)), m, x.$(each.name))
+            println(io, ",")
+        end
+
+        if each.default !== no_default
+            push!(body.args, quote
+                if x.$(each.name) != field_default(typeof(x), $(QuoteNode(each.name)))
+                    $print_ex
+                end
+            end)
+        else
+            push!(body.args, print_ex)
+        end
     end
-    
+
     push!(body.args, :(print(io, " "^indent, ")")))
 
-    def = Dict(
-        :name => GlobalRef(Base, :show),
-        :args => [:(io::IO), :(m::MIME"text/plain"), :(x::$(x.name))],
-        :body => body,
-    )
+    if isempty(x.parameters)
+        T = x.name
+        def = Dict(
+            :name => GlobalRef(Base, :show),
+            :args => [:(io::IO), :(m::MIME"text/plain"), :(x::$T)],
+            :body => body,
+        )
+    else
+        T = Expr(:curly, x.name, map(name_only, x.parameters)...)
+        def = Dict(
+            :name => GlobalRef(Base, :show),
+            :args => [:(io::IO), :(m::MIME"text/plain"), :(x::$T)],
+            :body => body,
+            :whereparams => x.parameters,
+        )
+    end
 
     return combinedef(def)
 end
@@ -681,32 +730,29 @@ function codegen_convert(x::OptionDef)
     :(Base.convert(::Type{<:$(x.name)}, d::AbstractDict{String}) = $(GlobalRef(Configurations, :from_dict))($(x.name), d))
 end
 
-function codegen_field_defaults(x::OptionDef)
-    defaults = Expr(:ref, Any)
+replace_symbol(x::Symbol, name::Symbol, value) = x === name ? value : x
+replace_symbol(x, ::Symbol, value) = x # other expressions
+
+function replace_symbol(ex::Expr, name::Symbol, value)
+    Expr(ex.head, map(x->replace_symbol(x, name, value), ex.args)...)
+end
+
+function resolve_defaults(x::OptionDef)
+    map = Dict{Symbol, Any}()
     for each in x.fields
-        push!(defaults.args, each.default)
+        default = each.default
+        for prev in keys(map)
+            if has_symbol(each.default, prev)
+                default = replace_symbol(each.default, prev, map[prev])
+            end
+        end
+        map[each.name] = default
     end
-
-    if isempty(x.parameters)
-        def = Dict(
-            :name => GlobalRef(Configurations, :field_defaults),
-            :args => [:(::Type{$(x.name)})],
-            :body => defaults
-        )
-    else
-        T = Expr(:curly, x.name, map(name_only, x.parameters)...)
-        def = Dict(
-            :name => GlobalRef(Configurations, :field_defaults),
-            :args => [:(::Type{$T})],
-            :body => defaults,
-            :whereparams => x.parameters,
-        )
-    end
-
-    return combinedef(def)
+    return map
 end
 
 function codegen_field_default(x::OptionDef)
+    dmap = resolve_defaults(x)
     obj = gensym(:x)
     msg = Expr(:string, "type $(x.name) does not have field ", obj)
     err = :(error($msg))
@@ -716,7 +762,7 @@ function codegen_field_default(x::OptionDef)
     for k in 1:length(x.fields)
         field = x.fields[k]
         push!(stmt.args, :($obj == $(QuoteNode(field.name))))
-        push!(stmt.args, field.default)
+        push!(stmt.args, dmap[field.name])
 
         if k != length(x.fields)
             push!(stmt.args, Expr(:elseif))
@@ -818,7 +864,6 @@ function codegen(def::OptionDef)
         $(codegen_convert(def))
         $(codegen_show_text(def))
         $(codegen_is_option(def))
-        $(codegen_field_defaults(def))
         $(codegen_field_default(def))
         $(codegen_alias(def))
         $(codegen_isequal(def))
