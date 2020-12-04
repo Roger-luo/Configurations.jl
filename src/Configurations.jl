@@ -66,7 +66,7 @@ function to_toml(x; sorted=false, by=identity)
     return sprint(to_toml, x)
 end
 
-function to_toml(io, x; sorted=false, by=identity)
+function to_toml(io::IO, x; sorted=false, by=identity)
     return to_toml(identity, io, x; sorted=sorted, by=by)
 end
 
