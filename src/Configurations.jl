@@ -676,14 +676,22 @@ function codegen_show_text(x::OptionDef)
     body = quote
         head_indent = get(io, :head_indent, 0)
         indent = get(io, :indent, 0)
-        println(io, " "^head_indent, $GREEN_FG(summary(x)), "(;")
+        all_default = true
+        print(io, " "^head_indent, $GREEN_FG(summary(x)), "(")
     end
 
+    is_first_field = true
     for each in x.fields
         print_ex = quote
+            all_default = false
             print(io, " "^(indent+4), $(LIGHT_BLUE_FG(string(each.name))), " = ")
             $(GlobalRef(Configurations, :option_print))(IOContext(io, :indent=>(indent+4)), m, x.$(each.name))
             println(io, ",")
+        end
+
+        if is_first_field
+            pushfirst!(print_ex.args, :(println(io, ";")))
+            is_first_field = false
         end
 
         if each.default !== no_default
@@ -697,7 +705,8 @@ function codegen_show_text(x::OptionDef)
         end
     end
 
-    push!(body.args, :(print(io, " "^indent, ")")))
+    push!(body.args, :(all_default || print(io, " "^indent)))
+    push!(body.args, :(print(io, ")")))
 
     if isempty(x.parameters)
         T = x.name
