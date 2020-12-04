@@ -679,6 +679,43 @@ function codegen_field_defaults(x::OptionDef)
     return combinedef(def)
 end
 
+function codegen_field_default(x::OptionDef)
+    body = Expr(:if)
+    stmt = body
+    obj = gensym(:x)
+    for k in 1:length(x.fields)
+        field = x.fields[k]
+        push!(stmt.args, :($obj == $(QuoteNode(field.name))))
+        push!(stmt.args, field.default)
+
+        if k != length(x.fields)
+            push!(stmt.args, Expr(:elseif))
+            stmt = stmt.args[end]
+        else
+            msg = Expr(:string, "type $(x.name) does not have field ", obj)
+            push!(stmt.args, :(error($msg)))
+        end
+    end
+
+    if isempty(x.parameters)
+        def = Dict(
+            :name => GlobalRef(Configurations, :field_default),
+            :args => [:(::Type{$(x.name)}), :($obj::Symbol)],
+            :body => body
+        )
+    else
+        T = Expr(:curly, x.name, map(name_only, x.parameters)...)
+        def = Dict(
+            :name => GlobalRef(Configurations, :field_default),
+            :args => [:(::Type{$T}), :($obj::Symbol)],
+            :body => body,
+            :whereparams => x.parameters,
+        )
+    end
+
+    return combinedef(def)
+end
+
 function codegen_alias(x::OptionDef)
     def = Dict(
         :name => GlobalRef(Configurations, :alias),
@@ -731,6 +768,7 @@ function codegen(def::OptionDef)
         $(codegen_show_text(def))
         $(codegen_is_option(def))
         $(codegen_field_defaults(def))
+        $(codegen_field_default(def))
         $(codegen_alias(def))
         $(codegen_isequal(def))
         $(codegen_show_toml_mime(def))
