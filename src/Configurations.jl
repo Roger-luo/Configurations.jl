@@ -564,7 +564,7 @@ function typevars_can_be_inferred(def::OptionDef)
 end
 
 function codegen_kw_fn(x::OptionDef)
-    isempty(x.fields) && return :()
+    isempty(x.fields) && return
     kwargs = []
     for each in x.fields
         if each.default === no_default
@@ -680,9 +680,12 @@ function codegen_field_defaults(x::OptionDef)
 end
 
 function codegen_field_default(x::OptionDef)
-    body = Expr(:if)
-    stmt = body
     obj = gensym(:x)
+    msg = Expr(:string, "type $(x.name) does not have field ", obj)
+    err = :(error($msg))
+    body = isempty(x.fields) ? err : Expr(:if)
+    stmt = body
+
     for k in 1:length(x.fields)
         field = x.fields[k]
         push!(stmt.args, :($obj == $(QuoteNode(field.name))))
@@ -692,8 +695,7 @@ function codegen_field_default(x::OptionDef)
             push!(stmt.args, Expr(:elseif))
             stmt = stmt.args[end]
         else
-            msg = Expr(:string, "type $(x.name) does not have field ", obj)
-            push!(stmt.args, :(error($msg)))
+            push!(stmt.args, err)
         end
     end
 

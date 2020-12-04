@@ -241,3 +241,9 @@ end
     @test field_default(NotInferrable2{Float64}, :a) == 1.0
     @test NotInferrable3{Int}(;b = 2) == NotInferrable3{Int}(2.0, 2)   
 end
+
+@option struct Empty end
+
+@testset "emptry struct" begin
+    @test_throws ErrorException field_default(Empty, :name)
+end
