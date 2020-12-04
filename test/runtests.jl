@@ -1,5 +1,5 @@
 using Configurations
-using Configurations: to_dict, to_toml, from_kwargs, from_dict, from_toml
+using Configurations: to_dict, to_toml, from_kwargs, from_dict, from_toml, no_default
 using OrderedCollections
 using Test
 
@@ -187,4 +187,40 @@ end
     d = to_dict(Julia())
     @test haskey(d, "versions")
     @test !haskey(d, "active")
+end
+
+function foo(::Type{T}) where T
+    return 1.0
+end
+
+@option struct Inferrable{A, B}
+    a::A
+    b::B = 1.0
+end
+
+@option struct NotInferrable1{T}
+    a::Float64
+    b::Int
+end
+
+@option struct NotInferrable2{T}
+    a::T = foo(T)
+    b::Int
+end
+
+@option struct NotInferrable3{T}
+    a::Float64 = foo(T)
+    b::Int
+end
+
+@testset "parametric types" begin
+    @test Inferrable(;a = 1) == Inferrable(1, 1.0)
+    @test_throws ErrorException Configurations.field_defaults(Inferrable)
+    @test Configurations.field_defaults(Inferrable{Float64, Float64}) == Any[no_default, 1.0]
+    @test_throws MethodError NotInferrable1(;a = 1.0, b = 1)
+    @test NotInferrable1{Int}(;a = 1.0, b = 1) == NotInferrable1{Int64}(1.0, 1)
+    @test_throws MethodError NotInferrable2(;a = 1.0, b = 2)
+    @test NotInferrable2{Float64}(;b=2) == NotInferrable2(1.0, 2)
+    @test_throws MethodError NotInferrable3(;a = 1.0, b = 1)
+    @test NotInferrable3{Int}(;b = 2) == NotInferrable3{Int}(1.0, 2)    
 end

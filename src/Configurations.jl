@@ -525,6 +525,44 @@ function codegen_struct_def(x::OptionDef)
     return Expr(:struct, x.ismutable, T, body)
 end
 
+function name_only(@nospecialize(ex))
+    ex isa Expr || return ex
+    ex.head === :call && return name_only(ex.args[1])
+    ex.head === :curly && return name_only(ex.args[1])
+    ex.head === :(<:) && return name_only(ex.args[1])
+    error("unsupported expression $ex")
+end
+
+function has_symbol(@nospecialize(ex), name::Symbol)
+    ex isa Symbol && return ex === name
+    ex isa Expr || return false
+    return any(x->has_symbol(x, name), ex.args)
+end
+
+function default_depends_on_typevars(def::OptionDef)
+    typevars = map(name_only, def.parameters)
+    for each in def.fields, tvar in typevars
+        if has_symbol(each.default, tvar)
+            return true
+        end
+    end
+    return false
+end
+
+function field_has_typevars(def::OptionDef)
+    typevars = map(name_only, def.parameters)
+    for each in def.fields, tvar in typevars
+        if has_symbol(each.type, tvar)
+            return true
+        end
+    end
+    return false
+end
+
+function typevars_can_be_inferred(def::OptionDef)
+    field_has_typevars(def) && !default_depends_on_typevars(def)
+end
+
 function codegen_kw_fn(x::OptionDef)
     isempty(x.fields) && return :()
     kwargs = []
@@ -535,13 +573,34 @@ function codegen_kw_fn(x::OptionDef)
             push!(kwargs, Expr(:kw, each.name, each.default))
         end
     end
-    
+
     def = Dict(
-        :name => x.name,
-        :kwargs => kwargs,
-        :body => Expr(:call, x.name, [each.name for each in x.fields]...)
-    )
-    return combinedef(def)
+            :name => x.name,
+            :kwargs => kwargs,
+            :body => Expr(:call, x.name, [each.name for each in x.fields]...)
+        )
+
+    if isempty(x.parameters)
+        return combinedef(def)
+    else
+        typevars = map(name_only, x.parameters)
+        T = Expr(:curly, x.name, typevars...)
+        curly_def = Dict(
+            :name => T,
+            :kwargs => kwargs,
+            :body => Expr(:call, T, [each.name for each in x.fields]...),
+            :whereparams => x.parameters,
+        )
+
+        if typevars_can_be_inferred(x)
+            return quote
+                $(combinedef(def))
+                $(combinedef(curly_def))
+            end
+        else
+            return combinedef(curly_def)
+        end
+    end
 end
 
 option_print(io::IO, m::MIME, x) = show(io, m, x)
@@ -564,7 +623,7 @@ option_print(io::IO, ::MIME, x::AbstractArray) = show(io, x)
 function codegen_show_text(x::OptionDef)
     body = quote
         indent = get(io, :indent, 0)
-        println(io, $(GREEN_FG(string(x.name))), "(;")
+        println(io, $GREEN_FG(summary(x)), "(;")
     end
 
     for each in x.fields
@@ -601,11 +660,21 @@ function codegen_field_defaults(x::OptionDef)
         push!(defaults.args, each.default)
     end
 
-    def = Dict(
-        :name => GlobalRef(Configurations, :field_defaults),
-        :args => [:(::Type{<:$(x.name)})],
-        :body => defaults
-    )
+    if isempty(x.parameters)
+        def = Dict(
+            :name => GlobalRef(Configurations, :field_defaults),
+            :args => [:(::Type{$(x.name)})],
+            :body => defaults
+        )
+    else
+        T = Expr(:curly, x.name, map(name_only, x.parameters)...)
+        def = Dict(
+            :name => GlobalRef(Configurations, :field_defaults),
+            :args => [:(::Type{$T})],
+            :body => defaults,
+            :whereparams => x.parameters,
+        )
+    end
 
     return combinedef(def)
 end
@@ -657,13 +726,7 @@ function codegen(def::OptionDef)
     quote
         $(codegen_struct_def(def))
         Core.@__doc__ $(def.name)
-        # NOTE: we don't generate this by default
-        # since there can be inference issue for
-        # parameterized types where users would
-        # like to define the methods themselves
-        # besides we have from_kwargs function
-        # already
-        # $(codegen_kw_fn(def))
+        $(codegen_kw_fn(def))
         $(codegen_convert(def))
         $(codegen_show_text(def))
         $(codegen_is_option(def))
