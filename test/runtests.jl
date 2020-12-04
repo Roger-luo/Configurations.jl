@@ -239,5 +239,5 @@ end
     @test_throws MethodError NotInferrable3(;a = 1.0, b = 1)
     @test field_default(NotInferrable2{Int}, :a) == 2
     @test field_default(NotInferrable2{Float64}, :a) == 1.0
-    @test NotInferrable3{Int}(;b = 2) == NotInferrable3{Int}(1.0, 2)   
+    @test NotInferrable3{Int}(;b = 2) == NotInferrable3{Int}(2.0, 2)   
 end
