@@ -48,6 +48,22 @@ but one can use this to avoid type piracy.
 option_convert(::Type, ::Type{A}, x) where {A} = convert(A, x)
 
 """
+    toml_convert(::Type, x)
+
+A convenient function for converting common Julia types to TOML compatible types. One
+can overload the first argument to custom the behaviour for a specific option type.
+"""
+toml_convert(::Type, x) = x
+toml_convert(::Type, x::VersionNumber) = string(x)
+
+"""
+    toml_convert(::Type{T}) where T
+
+Curried version of `toml_convert`.
+"""
+toml_convert(::Type{T}) where T = x->toml_convert(T, x)
+
+"""
     to_dict(option) -> OrderedDict
 
 Convert an option to an `OrderedDict`.
@@ -67,7 +83,7 @@ function to_toml(x; sorted=false, by=identity)
 end
 
 function to_toml(io::IO, x; sorted=false, by=identity)
-    return to_toml(identity, io, x; sorted=sorted, by=by)
+    return to_toml(toml_convert(typeof(x)), io, x; sorted=sorted, by=by)
 end
 
 """
