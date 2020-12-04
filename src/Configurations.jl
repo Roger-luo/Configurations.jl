@@ -45,7 +45,21 @@ end
 Convert `x` to type `ValueType` for option type `OptionType`. This is similar to `Base.convert`,
 but one can use this to avoid type piracy.
 """
-option_convert(::Type, ::Type{A}, x) where {A} = convert(A, x)
+option_convert(::Type, ::Type{A}, x) where {A} = nothing
+
+option_convert(::Type, ::Type{VersionNumber}, x::String) = VersionNumber(x)
+
+function option_convert_union(::Type{T}, ::Type{A}, x) where {T, A}
+    if !(A isa Union)
+        v = option_convert(T, A, x)
+        v === nothing || return v
+        return
+    end
+
+    v = option_convert_union(T, A.a, x)
+    v === nothing || return v
+    return option_convert_union(T, A.b, x)
+end
 
 """
     toml_convert(::Type, x)
@@ -258,7 +272,12 @@ function from_dict_inner(::Type{T}, d::AbstractDict{String}) where T
             # need some assertions so we call from_dict_validate
             push!(args, from_dict_validate(type, value))
         else
-            push!(args, option_convert(T, type, value))
+            v = option_convert_union(T, type, value)
+            if v === nothing
+                push!(args, convert(type, value))
+            else
+                push!(args, v)
+            end
         end
     end
 
