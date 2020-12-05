@@ -135,8 +135,11 @@ function dictionalize(x)
     T = typeof(x)
     for name in fieldnames(T)
         value = getfield(x, name)
-        if value !== field_default(T, name)
-            d[string(name)] = dictionalize(value)
+        if value != field_default(T, name)
+            field_dict = dictionalize(value)
+            if !isempty(field_dict)
+                d[string(name)] = field_dict
+            end
         end
     end
     return d
@@ -247,9 +250,10 @@ are available in the dict object.
 """
 function from_dict_inner(::Type{T}, d::AbstractDict{String}) where T
     args = Any[]
-    for (each, default) in zip(fieldnames(T), field_defaults(T))
+    for each in fieldnames(T)
         key = string(each)
         type = fieldtype(T, each)
+        default = field_default(T, each)
  
         if default === no_default
             if type isa Union
