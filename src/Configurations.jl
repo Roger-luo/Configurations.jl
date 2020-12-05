@@ -128,9 +128,10 @@ Convert `x` to an `OrderedDict`.
 function dictionalize(x)
     is_option(x) || return x
     d = OrderedDict{String, Any}()
-    for name in fieldnames(typeof(x))
+    T = typeof(x)
+    for name in fieldnames(T)
         value = dictionalize(getfield(x, name))
-        if value !== nothing
+        if value !== field_default(T, name)
             d[string(name)] = value
         end
     end
