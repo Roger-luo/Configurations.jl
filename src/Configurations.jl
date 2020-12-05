@@ -130,9 +130,9 @@ function dictionalize(x)
     d = OrderedDict{String, Any}()
     T = typeof(x)
     for name in fieldnames(T)
-        value = dictionalize(getfield(x, name))
+        value = getfield(x, name)
         if value !== field_default(T, name)
-            d[string(name)] = value
+            d[string(name)] = dictionalize(value)
         end
     end
     return d

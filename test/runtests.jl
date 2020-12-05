@@ -16,7 +16,7 @@ end
     float::Float64 = 0.3
 end
 
-d = OrderedDict{String, Any}(
+dict1 = OrderedDict{String, Any}(
     "opt" => OrderedDict{String, Any}(
         "name" => "Roger",
         "int" => 2,
@@ -24,7 +24,11 @@ d = OrderedDict{String, Any}(
     "float" => 0.33
 )
 
-option = from_dict(OptionB, d)
+dict2 = OrderedDict{String, Any}(
+    "float" => 0.33
+)
+
+option = from_dict(OptionB, dict1)
 
 @testset "options" begin
     @test option == OptionB(;
@@ -40,8 +44,9 @@ end
 
 @testset "to_dict" begin
     @test_throws ErrorException to_dict("aaa")
-    @test to_dict(option) == d
+    @test to_dict(option) == dict1
     @test to_toml(option) == "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
+    @test to_dict(from_dict(OptionB, dict2)) == dict2
 end
 
 @testset "default reflection" begin
@@ -75,7 +80,7 @@ end
 @testset "test multi option type" begin
     d1 = OrderedDict{String, Any}(
         "opt" => OrderedDict{String, Any}(
-            "option_b" => d
+            "option_b" => dict1
         )
     )
 
