@@ -1,6 +1,6 @@
 module Configurations
 
-export @option, from_dict, from_kwargs, from_toml, to_dict, to_toml
+export @option, from_dict, from_kwargs, from_toml, to_dict, toml
 
 using OrderedCollections
 using MatchCore
@@ -43,7 +43,7 @@ end
     option_convert(::Type{OptionType}, ::Type{ValueType}, x) where {OptionType, ValueType}
 
 Convert `x` to type `ValueType` for option type `OptionType`. This is similar to `Base.convert`,
-but one can use this to avoid type piracy.
+when creating an instance of the option type, but one can use this to avoid type piracy.
 """
 option_convert(::Type, ::Type{A}, x) where {A} = nothing
 
@@ -84,39 +84,43 @@ Convert an option to an `OrderedDict`.
 """
 function to_dict(x)
     is_option(x) || error("argument is not an option type")
-    return dictionalize(x)
+    return dictionalize(x)::OrderedDict
 end
 
 """
-    to_toml(x; sorted=false, by=identity)
+    toml(x; sorted=false, by=identity)
 
 Convert an instance `x` of option type to TOML and write it to `String`. See also `TOML.print`.
 """
-function to_toml(x; sorted=false, by=identity)
-    return sprint(to_toml, x)
+function toml(x; sorted=false, by=identity)
+    return sprint(toml, x)
 end
 
-function to_toml(io::IO, x; sorted=false, by=identity)
-    return to_toml(toml_convert(typeof(x)), io, x; sorted=sorted, by=by)
+function toml(io::IO, x; sorted=false, by=identity)
+    return toml(toml_convert(typeof(x)), io, x; sorted=sorted, by=by)
+end
+
+function toml(filename::String, x; sorted=false, by=identity)
+    return toml(toml_convert(typeof(x)), filename, x; sorted=sorted, by=by)
 end
 
 """
-    to_toml([to_toml::Function], filename::String, option; sorted=false, by=identity)
+    toml([to_toml::Function], filename::String, option; sorted=false, by=identity)
 
 Convert an instance `option` of option type to TOML and write it to `filename`. See also `TOML.print`.
 """
-function to_toml(f, filename::String, x; sorted=false, by=identity)
+function toml(f, filename::String, x; sorted=false, by=identity)
     open(filename, "w+") do io
-        to_toml(f, io, x; sorted=sorted, by=by)
+        toml(f, io, x; sorted=sorted, by=by)
     end
 end
 
 """
-    to_toml([to_toml::Function], io::IO [=stdout], option; sorted=false, by=identity)
+    toml([toml::Function], io::IO, option; sorted=false, by=identity)
 
 Convert an instance `option` of option type to TOML and write it to `IO`. See also `TOML.print`.
 """
-function to_toml(f, io::IO, x; sorted=false, by=identity)
+function toml(f, io::IO, x; sorted=false, by=identity)
     return TOML.print(f, io, to_dict(x); sorted=sorted, by=by)
 end
 
@@ -893,7 +897,7 @@ end
 function codegen_show_toml_mime(x::OptionDef)
     :(
         function Base.show(io::IO, ::MIME"application/toml", x::$(x.name))
-            return print(io, to_toml(x))
+            return print(io, toml(x))
         end
     )
 end

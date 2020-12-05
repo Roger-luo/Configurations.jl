@@ -1,5 +1,5 @@
 using Configurations
-using Configurations: to_dict, to_toml, from_kwargs, from_dict,
+using Configurations: to_dict, toml, from_kwargs, from_dict,
     from_toml, no_default, field_defaults, field_default
 using OrderedCollections
 using Test
@@ -45,7 +45,7 @@ end
 @testset "to_dict" begin
     @test_throws ErrorException to_dict("aaa")
     @test to_dict(option) == dict1
-    @test to_toml(option) == "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
+    @test toml(option) == "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
     @test to_dict(from_dict(OptionB, dict2)) == dict2
 end
 
