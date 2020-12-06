@@ -137,9 +137,7 @@ function dictionalize(x)
         value = getfield(x, name)
         if value != field_default(T, name)
             field_dict = dictionalize(value)
-            if !isempty(field_dict)
-                d[string(name)] = field_dict
-            end
+            d[string(name)] = field_dict
         end
     end
     return d
