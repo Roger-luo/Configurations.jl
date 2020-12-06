@@ -740,7 +740,7 @@ function codegen_show_text(x::OptionDef)
 
         if each.default !== no_default
             push!(body.args, quote
-                if x.$(each.name) != field_default(typeof(x), $(QuoteNode(each.name)))
+                if x.$(each.name) != $field_default(typeof(x), $(QuoteNode(each.name)))
                     $print_ex
                 end
             end)
