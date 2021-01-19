@@ -299,7 +299,9 @@ can be override by keyword arguments. See also [`from_dict`](@ref).
 """
 function from_toml(::Type{T}, filename::String; kw...) where T
     is_option(T) || error("not an option type")
-    return from_dict(T, TOML.parsefile(filename); kw...)
+    d = TOML.parsefile(filename)
+    d["#filename#"] = filename
+    return from_dict(T, d; kw...)
 end
 
 """
