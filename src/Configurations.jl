@@ -187,6 +187,7 @@ function from_dict_validate(::Type{T}, d::AbstractDict{String}) where T
     is_option(T) || error("$T is not an option type")
 
     for k in keys(d)
+        k == "#filename#" && continue
         Symbol(k) in fieldnames(T) || error("invalid key: $k")
     end
 
