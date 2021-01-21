@@ -27,16 +27,35 @@ function field_defaults(::Type{T}) where T
 end
 
 """
+    field_alias(::Type{T}) where T
+
+Return all field name alias of given option types.
+"""
+function field_aliases(::Type{T}) where T
+    is_option(T) || error("$T is not an option type")
+    return Any[field_alias(T, each) for each in fieldnames(T)]
+end
+
+"""
     field_default(::Type{T}, name::Symbol)
 
 Return the default value of field `name` of an option type `T`.
 """
 function field_default(::Type{T}, name::Symbol) where {T}
-    error("$T is not an option type")
+    error("field_default is not defined for $T, it may not be an option type")
+end
+
+"""
+    field_alias(::Type{T}, name::Symbol) where {T}
+
+Return field name alias of given option types.
+"""
+function field_alias(::Type{T}, name::Symbol) where {T}
+    error("field_alias is not defined for $T, it may not be an option type")
 end
 
 function alias(::Type{T}) where T
-    error("$T is not an option type")
+    error("alias is not defined $T, it may not be an option type")
 end
 
 """
@@ -188,12 +207,15 @@ function from_dict_validate(::Type{T}, d::AbstractDict{String}) where T
 
     for k in keys(d)
         k == "#filename#" && continue
-        Symbol(k) in fieldnames(T) || error("invalid key: $k")
+        k in field_aliases(T) || Symbol(k) in fieldnames(T) || error("invalid key: $k")
     end
 
     for (name, default) in zip(fieldnames(T), field_defaults(T))
         if default === no_default
-            haskey(d, string(name)) || error("$name is required")
+            alias = field_alias(T, name)
+            haskey(d, string(name)) && continue
+            alias !== nothing && haskey(d, alias) && continue
+            error("$name is required")
         end
     end
 
@@ -251,6 +273,7 @@ function from_dict_inner(::Type{T}, d::AbstractDict{String}) where T
     args = Any[]
     for each in fieldnames(T)
         key = string(each)
+        key = haskey(d, key) ? key : field_alias(T, each)
         type = fieldtype(T, each)
         default = field_default(T, each)
  
@@ -402,6 +425,7 @@ Type to represent a field definition in option type.
 """
 struct Field
     name::Symbol
+    alias::Maybe{String}
     type::Any
     default::Any
     line
@@ -442,6 +466,10 @@ function Base.show(io::IO, x::Field)
 
     if x.default !== no_default
         print(io, " = ", x.default)
+    end
+
+    if x.alias !== nothing
+        print(io, " ", MAGENTA_FG("($(x.alias))"))
     end
 end
 
@@ -532,30 +560,37 @@ function split_body(ex::Expr)
     fields = Field[]
     misc = Any[]
     line = nothing
+    alias = nothing
 
     for each in body.args
-        item = @smatch each begin
-            :($name::$type = $default) => Field(name, type, default, line)
-
-            :($name::$type) => Field(name, type, no_default, line)
-
-            Expr(:(=), name::Symbol, default) => Field(name, Any, default, line)
-
-            ::Symbol => Field(each, Any, no_default, line)
-
-            ::LineNumberNode => begin
-                line = each
+        @smatch each begin
+            :($name::$type = $default) => begin
+                push!(fields, Field(name, alias, type, default, line))
+                alias = nothing
             end
+
+            :($name::$type) => begin
+                push!(fields, Field(name, alias, type, no_default, line))
+                alias = nothing
+            end
+
+            Expr(:(=), name::Symbol, default) => begin
+                push!(fields, Field(name, alias, Any, default, line))
+                alias = nothing
+            end
+
+            ::Symbol => begin
+                push!(fields, Field(each, alias, Any, no_default, line))
+                alias = nothing
+            end
+
+            ::String => (alias = each)
+            ::LineNumberNode => (line = each)
 
             _ => begin
                 push!(misc, line)
                 push!(misc, each)
-                nothing
             end
-        end
-
-        if item isa Field
-            push!(fields, item)
         end
     end
     return fields, misc
@@ -845,6 +880,44 @@ function codegen_field_default(x::OptionDef)
     return combinedef(def)
 end
 
+function codegen_field_alias(x::OptionDef)
+    obj = gensym(:x)
+    msg = Expr(:string, "type $(x.name) does not have field ", obj)
+    err = :(error($msg))
+    body = isempty(x.fields) ? err : Expr(:if)
+    stmt = body
+
+    for k in 1:length(x.fields)
+        field = x.fields[k]
+        push!(stmt.args, :($obj == $(QuoteNode(field.name))))
+        push!(stmt.args, field.alias)
+
+        if k != length(x.fields)
+            push!(stmt.args, Expr(:elseif))
+            stmt = stmt.args[end]
+        else
+            push!(stmt.args, err)
+        end
+    end
+
+    if isempty(x.parameters)
+        def = Dict(
+            :name => GlobalRef(Configurations, :field_alias),
+            :args => [:(::Type{$(x.name)}), :($obj::Symbol)],
+            :body => body
+        )
+    else
+        T = Expr(:curly, x.name, map(name_only, x.parameters)...)
+        def = Dict(
+            :name => GlobalRef(Configurations, :field_alias),
+            :args => [:(::Type{$T}), :($obj::Symbol)],
+            :body => body,
+            :whereparams => x.parameters,
+        )
+    end
+    return combinedef(def)
+end
+
 function codegen_alias(x::OptionDef)
     def = Dict(
         :name => GlobalRef(Configurations, :alias),
@@ -919,6 +992,7 @@ function codegen(def::OptionDef)
         $(codegen_show_text(def))
         $(codegen_is_option(def))
         $(codegen_field_default(def))
+        $(codegen_field_alias(def))
         $(codegen_alias(def))
         $(codegen_isequal(def))
         $(codegen_show_toml_mime(def))

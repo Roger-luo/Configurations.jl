@@ -1,6 +1,6 @@
 using Configurations
 using Configurations: to_dict, toml, from_kwargs, from_dict,
-    from_toml, no_default, field_defaults, field_default
+    from_toml, no_default, field_defaults, field_default, field_alias, field_aliases
 using OrderedCollections
 using Test
 
@@ -290,4 +290,17 @@ end
 
 @testset "default resolve" begin
     @test field_default(DefaultResolve, :b) == sin(1)    
+end
+
+@option struct FieldAlias
+    "alpha"
+    α::Float64 = 1
+    "beta"
+    β::Float64
+end
+
+@testset "field alias" begin
+    d = Dict("alpha" => 2, "beta" => 3)
+    @test from_dict(FieldAlias, d) == FieldAlias(;α=2, β=3)
+    @test field_aliases(FieldAlias) == ["alpha", "beta"]
 end
