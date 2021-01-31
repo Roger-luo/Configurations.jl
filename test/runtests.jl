@@ -1,5 +1,5 @@
 using Configurations
-using Configurations: to_dict, toml, from_kwargs, from_dict,
+using Configurations: OptionDef, to_dict, toml, from_kwargs, from_dict,
     from_toml, no_default, field_defaults, field_default, field_alias, field_aliases
 using OrderedCollections
 using Test
@@ -305,3 +305,23 @@ end
     @test from_dict(FieldAlias, d) == FieldAlias(;α=2, β=3)
     @test field_aliases(FieldAlias) == ["alpha", "beta"]
 end
+
+@testset "non-option type handling" begin
+    @test_throws ErrorException field_default(Int, :a)
+    @test_throws ErrorException field_alias(Int, :a)
+    @test_throws ErrorException alias(Int)
+end
+
+ex = :(struct OptionA
+    name::String
+    int::Int = 1
+end)
+def = OptionDef(ex)
+print(def)
+
+ex = :(struct Inferrable{A, B}
+    a::A
+    b::B = 1.0
+end)
+def = OptionDef(ex)
+print(def)
