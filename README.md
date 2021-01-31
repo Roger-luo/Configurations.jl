@@ -1,6 +1,6 @@
 # Configurations
 
-[![tests](https://github.com/Roger-luo/Configurations.jl/workflows/tests/badge.svg)](https://github.com/Roger-luo/Configurations.jl/actions)
+[![CI](https://github.com/Roger-luo/Configurations.jl/workflows/CI/badge.svg)](https://github.com/Roger-luo/Configurations.jl/actions)
 
 Configurations & Options made easy.
 
