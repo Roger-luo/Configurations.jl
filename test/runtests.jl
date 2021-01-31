@@ -1,6 +1,7 @@
 using Configurations
 using Configurations: OptionDef, to_dict, toml, from_kwargs, from_dict, alias,
-    from_toml, no_default, field_defaults, field_default, field_alias, field_aliases
+    from_toml, no_default, field_defaults, field_default, field_alias, field_aliases,
+    option_print
 using OrderedCollections
 using Test
 
@@ -329,4 +330,8 @@ end
 
     show(stdout, MIME"text/plain"(), FieldAlias(;β=2.0))
     show(stdout, MIME"text/plain"(), OptionB())
+    option_print(stdout, MIME"text/plain"(), 1)
+    option_print(stdout, MIME"text/plain"(), Dict("a"=>1))
+    option_print(stdout, MIME"text/plain"(), [1, 2, 3])
+    option_print(stdout, MIME"text/plain"(), rand(2, 2))
 end
