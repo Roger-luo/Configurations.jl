@@ -1,5 +1,5 @@
 using Configurations
-using Configurations: OptionDef, to_dict, toml, from_kwargs, from_dict,
+using Configurations: OptionDef, to_dict, toml, from_kwargs, from_dict, alias,
     from_toml, no_default, field_defaults, field_default, field_alias, field_aliases
 using OrderedCollections
 using Test
