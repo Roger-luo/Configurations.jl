@@ -873,7 +873,7 @@ function codegen_field_default(x::OptionDef)
             :name => GlobalRef(Configurations, :field_default),
             :args => [:(::Type{$X}), :($obj::Symbol)],
             :body => body,
-            :whereparams => [:($X <: $(x.name))],
+            :whereparams => [x.parameters..., :($X <: $(x.name){$(name_only.(x.parameters)...)})],
         )
     end
 
@@ -912,7 +912,7 @@ function codegen_field_alias(x::OptionDef)
             :name => GlobalRef(Configurations, :field_alias),
             :args => [:(::Type{$X}), :($obj::Symbol)],
             :body => body,
-            :whereparams => [:($X <: $(x.name))],
+            :whereparams => [x.parameters..., :($X <: $(x.name){$(name_only.(x.parameters)...)})],
         )
     end
     return combinedef(def)
