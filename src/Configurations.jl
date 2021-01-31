@@ -869,12 +869,11 @@ function codegen_field_default(x::OptionDef)
         )
     else
         X = gensym(:T)
-        T = Expr(:curly, x.name, map(name_only, x.parameters)...)
         def = Dict(
             :name => GlobalRef(Configurations, :field_default),
             :args => [:(::Type{$X}), :($obj::Symbol)],
             :body => body,
-            :whereparams => [:($X <: $T)],
+            :whereparams => [:($X <: $(x.name))],
         )
     end
 
@@ -909,12 +908,11 @@ function codegen_field_alias(x::OptionDef)
         )
     else
         X = gensym(:T)
-        T = Expr(:curly, x.name, map(name_only, x.parameters)...)
         def = Dict(
             :name => GlobalRef(Configurations, :field_alias),
             :args => [:(::Type{$X}), :($obj::Symbol)],
             :body => body,
-            :whereparams => [:($X <: $T)],
+            :whereparams => [:($X <: $(x.name))],
         )
     end
     return combinedef(def)
