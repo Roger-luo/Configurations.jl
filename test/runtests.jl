@@ -312,16 +312,21 @@ end
     @test_throws ErrorException alias(Int)
 end
 
-ex = :(struct OptionA
-    name::String
-    int::Int = 1
-end)
-def = OptionDef(ex)
-print(def)
+@testset "printings" begin
+    ex = :(struct OptionA
+        name::String
+        int::Int = 1
+    end)
+    def = OptionDef(ex)
+    print(def)
 
-ex = :(struct Inferrable{A, B}
-    a::A
-    b::B = 1.0
-end)
-def = OptionDef(ex)
-print(def)
+    ex = :(struct Inferrable{A, B}
+        a::A
+        b::B = 1.0
+    end)
+    def = OptionDef(ex)
+    print(def)
+
+    show(stdout, MIME"text/plain"(), FieldAlias(;β=2.0))
+    show(stdout, MIME"text/plain"(), OptionB())
+end
