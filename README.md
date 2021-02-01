@@ -88,39 +88,6 @@ OptionD(;
         float = 0.33,
     ),
 )
-
-```julia
-julia> using Configurations
-
-julia> @option struct OptionA
-           name::String
-           int::Int = 1
-       end
-
-julia> @option struct OptionB
-           opt::OptionA = OptionA(;name = "Sam")
-           float::Float64 = 0.3
-       end
-
-julia> d = Dict(
-           "opt" => Dict(
-               "name" => "Roger",
-               "int" => 2,
-           ),
-           "float" => 0.33
-       )
-Dict{String, Any} with 2 entries:
-  "opt"   => Dict{String, Any}("int"=>2, "name"=>"Roger")
-  "float" => 0.33
-
-julia> option = from_dict(OptionB, d)
-OptionB(;
-  opt = OptionA(;
-    name = "Roger",
-    int = 2,
-  ),
-  float = 0.33,
-)
 ```
 
 Or you can also create it from keyword arguments, e.g
