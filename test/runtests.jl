@@ -335,3 +335,32 @@ end
     option_print(stdout, MIME"text/plain"(), [1, 2, 3])
     option_print(stdout, MIME"text/plain"(), rand(2, 2))
 end
+
+@option struct UnionToDict
+    option::Union{Nothing, OptionA, OptionB} = nothing
+end
+
+@testset "multi-union to_dict/from_dict" begin
+    d = OrderedDict{String, Any}(
+        "option" => OrderedDict{String, Any}(
+            "option_a" => to_dict(OptionA(; name="Name"))
+        )
+    )
+
+    @test from_dict(UnionToDict, d) == UnionToDict(;
+        option = OptionA(;
+            name = "Name",
+        ),
+    )
+
+    d = OrderedDict{String, Any}(
+        "option" => OrderedDict{String, Any}(
+        )
+    )
+
+    @test from_dict(UnionToDict, d) == UnionToDict()
+
+    x = UnionToDict(;option=OptionA(; name="Name"))
+    d = to_dict(x)
+    @test from_dict(UnionToDict, d) == x
+end

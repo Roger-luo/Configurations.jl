@@ -153,10 +153,20 @@ function dictionalize(x)
     d = OrderedDict{String, Any}()
     T = typeof(x)
     for name in fieldnames(T)
+        type = fieldtype(T, name)
         value = getfield(x, name)
         if value != field_default(T, name)
             field_dict = dictionalize(value)
-            d[string(name)] = field_dict
+
+            # always add an alias if it's a Union
+            # of multiple option types
+            if is_option(value) && type isa Union
+                d[string(name)] = OrderedDict{String, Any}(
+                    alias(typeof(value)) => field_dict,
+                )
+            else
+                d[string(name)] = field_dict
+            end
         end
     end
     return d
@@ -245,6 +255,7 @@ pick_union(::Type{T}, x) where T = T, x
 
 function pick_union(::Type{T}, d::AbstractDict{String}) where T
     if !(T isa Union)
+        T === Nothing && return
         is_option(T) || return T, d
         if haskey(d, alias(T))
             return T, d[alias(T)]
@@ -252,12 +263,16 @@ function pick_union(::Type{T}, d::AbstractDict{String}) where T
             return
         end
     end
-    
+
     assert_union_alias(T)
-    if is_option(T.a) && alias(T.a) !== nothing && haskey(d, alias(T.a))
-        return T.a, d[alias(T.a)]
+
+    ret_a = pick_union(T.a, d)
+    ret_b = pick_union(T.b, d)
+
+    if ret_a === nothing
+        return ret_b
     else
-        return pick_union(T.b, d)
+        return ret_a
     end
 end
 
@@ -302,6 +317,9 @@ function from_dict_inner(::Type{T}, d::AbstractDict{String}) where T
         if is_option(type) && value isa AbstractDict{String}
             # need some assertions so we call from_dict_validate
             push!(args, from_dict_validate(type, value))
+        elseif value isa AbstractDict && isempty(value) && Nothing <: type
+            # empty collection
+            push!(args, nothing)
         else
             v = option_convert_union(T, type, value)
             if v === nothing
