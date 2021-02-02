@@ -1,7 +1,7 @@
 using Configurations
 using Configurations: OptionDef, to_dict, toml, from_kwargs, from_dict, alias,
     from_toml, no_default, field_defaults, field_default, field_alias, field_aliases,
-    option_print
+    option_print, resolve_defaults, PartialDefault
 using OrderedCollections
 using Test
 
@@ -363,4 +363,14 @@ end
     x = UnionToDict(;option=OptionA(; name="Name"))
     d = to_dict(x)
     @test from_dict(UnionToDict, d) == x
+end
+
+@option struct DefaultFunction
+    a::Float64
+    b::Float64 = sin(a)
+end
+
+@testset "partial default" begin
+    x = DefaultFunction(;a=1.0, b=2.0)
+    @test field_default(DefaultFunction, :b)(x) == sin(1.0)
 end

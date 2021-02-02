@@ -10,6 +10,14 @@ using TOML
 
 struct NoDefault end
 
+struct PartialDefault{F}
+    lambda::F
+    expr::Expr
+end
+
+(f::PartialDefault)(x) = f.lambda(x)
+Base.show(io::IO, x::PartialDefault) = print(io, x.expr)
+
 "const for non default fields"
 const no_default = NoDefault()
 
@@ -794,7 +802,12 @@ function codegen_show_text(x::OptionDef)
 
         if each.default !== no_default
             push!(body.args, quote
-                if x.$(each.name) != $field_default(typeof(x), $(QuoteNode(each.name)))
+                default = $field_default(typeof(x), $(QuoteNode(each.name)))
+                if default isa $PartialDefault
+                    default = default(x)
+                end
+
+                if x.$(each.name) != default
                     $print_ex
                 end
             end)
@@ -848,10 +861,27 @@ function resolve_defaults(x::OptionDef)
     map = Dict{Symbol, Any}()
     for each in x.fields
         default = each.default
+        obj = gensym(:x)
+        partial_default = false
         for prev in keys(map)
             if has_symbol(each.default, prev)
-                default = replace_symbol(each.default, prev, map[prev])
+                if map[prev] === no_default
+                    partial_default = true
+                    default = replace_symbol(default, prev, :($obj.$prev))
+                else
+                    default = replace_symbol(default, prev, map[prev])
+                end
             end
+        end
+
+        if partial_default
+            def = Dict{Symbol, Any}(
+                :args=>[:($obj::$(x.name))],
+                :body=>default
+            )
+            default = combinedef(def)
+            expr = Expr(:quote, each.default)
+            default = :($PartialDefault($default, $expr))
         end
         map[each.name] = default
     end
