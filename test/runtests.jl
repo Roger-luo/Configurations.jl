@@ -46,8 +46,13 @@ end
 @testset "to_dict" begin
     @test_throws ErrorException to_dict("aaa")
     @test to_dict(option) == dict1
-    @test to_toml(option) == "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
     @test to_dict(from_dict(OptionB, dict2)) == dict2
+end
+
+@testset "to_toml" begin
+    @test to_toml(option) == "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
+    to_toml("test.toml", option)
+    @test read("test.toml", String) == "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
 end
 
 @testset "default reflection" begin
