@@ -151,6 +151,8 @@ function to_toml(f, io::IO, x; sorted=false, by=identity)
     return TOML.print(f, io, to_dict(x); sorted=sorted, by=by)
 end
 
+@deprecate toml to_toml
+
 """
     dictionalize(x)
 
