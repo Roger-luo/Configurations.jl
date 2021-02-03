@@ -1,6 +1,6 @@
 module Configurations
 
-export @option, from_dict, from_kwargs, from_toml, to_dict, toml
+export @option, from_dict, from_kwargs, from_toml, to_dict, to_toml
 
 using OrderedCollections
 using MatchCore
@@ -119,16 +119,16 @@ end
 
 Convert an instance `x` of option type to TOML and write it to `String`. See also `TOML.print`.
 """
-function toml(x; sorted=false, by=identity)
-    return sprint(toml, x)
+function to_toml(x; sorted=false, by=identity)
+    return sprint(to_toml, x)
 end
 
-function toml(io::IO, x; sorted=false, by=identity)
-    return toml(toml_convert(typeof(x)), io, x; sorted=sorted, by=by)
+function to_toml(io::IO, x; sorted=false, by=identity)
+    return to_toml(toml_convert(typeof(x)), io, x; sorted=sorted, by=by)
 end
 
-function toml(filename::String, x; sorted=false, by=identity)
-    return toml(toml_convert(typeof(x)), filename, x; sorted=sorted, by=by)
+function to_toml(filename::String, x; sorted=false, by=identity)
+    return to_toml(toml_convert(typeof(x)), filename, x; sorted=sorted, by=by)
 end
 
 """
@@ -136,9 +136,9 @@ end
 
 Convert an instance `option` of option type to TOML and write it to `filename`. See also `TOML.print`.
 """
-function toml(f, filename::String, x; sorted=false, by=identity)
+function to_toml(f, filename::String, x; sorted=false, by=identity)
     open(filename, "w+") do io
-        toml(f, io, x; sorted=sorted, by=by)
+        to_toml(f, io, x; sorted=sorted, by=by)
     end
 end
 
@@ -147,7 +147,7 @@ end
 
 Convert an instance `option` of option type to TOML and write it to `IO`. See also `TOML.print`.
 """
-function toml(f, io::IO, x; sorted=false, by=identity)
+function to_toml(f, io::IO, x; sorted=false, by=identity)
     return TOML.print(f, io, to_dict(x); sorted=sorted, by=by)
 end
 
@@ -1023,7 +1023,7 @@ end
 function codegen_show_toml_mime(x::OptionDef)
     :(
         function Base.show(io::IO, ::MIME"application/toml", x::$(x.name))
-            return print(io, toml(x))
+            return print(io, to_toml(x))
         end
     )
 end
