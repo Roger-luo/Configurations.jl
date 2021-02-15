@@ -105,7 +105,7 @@ Curried version of `toml_convert`.
 toml_convert(::Type{T}) where T = x->toml_convert(T, x)
 
 """
-    to_dict(option) -> OrderedDict
+    to_dict(option; include_defaults=false) -> OrderedDict
 
 Convert an option to an `OrderedDict`.
 """
@@ -115,11 +115,11 @@ function to_dict(x; include_defaults=false)
 end
 
 """
-    to_toml(x; sorted=false, by=identity)
+    to_toml(x; sorted=false, by=identity, include_defaults=false)
 
 Convert an instance `x` of option type to TOML and write it to `String`. See also `TOML.print`.
 """
-function to_toml(x; sorted=false, by=identity, include_defaults::Bool=false)
+function to_toml(x; sorted=false, by=identity, include_defaults=false)
     kwargs::Dict{Symbol, Any} = Dict([:sorted => sorted, :by => by, :include_defaults => include_defaults])
     return sprint(to_toml, x, kwargs)
 end
@@ -135,7 +135,7 @@ end
 to_toml(filename::String, x, kwargs::Dict{Symbol, Any}) = to_toml(filename::String, x; kwargs...)
 
 """
-    to_toml([f::Function], filename::String, option; sorted=false, by=identity)
+    to_toml([f::Function], filename::String, option; sorted=false, by=identity, include_defaults=false)
 
 Convert an instance `option` of option type to TOML and write it to `filename`. See also `TOML.print`.
 """
@@ -146,7 +146,7 @@ function to_toml(f, filename::String, x; sorted=false, by=identity, include_defa
 end
 
 """
-    to_toml([f::Function], io::IO, option; sorted=false, by=identity)
+    to_toml([f::Function], io::IO, option; sorted=false, by=identity, include_defaults=false)
 
 Convert an instance `option` of option type to TOML and write it to `IO`. See also `TOML.print`.
 """
@@ -157,7 +157,7 @@ end
 @deprecate toml to_toml
 
 """
-    dictionalize(x)
+    dictionalize(x; include_defaults=false)
 
 Convert `x` to an `OrderedDict`.
 """
