@@ -109,9 +109,9 @@ toml_convert(::Type{T}) where T = x->toml_convert(T, x)
 
 Convert an option to an `OrderedDict`.
 """
-function to_dict(x)
+function to_dict(x; include_defaults=false)
     is_option(x) || error("argument is not an option type")
-    return dictionalize(x)::OrderedDict
+    return dictionalize(x; include_defaults=include_defaults)::OrderedDict
 end
 
 """
@@ -119,26 +119,29 @@ end
 
 Convert an instance `x` of option type to TOML and write it to `String`. See also `TOML.print`.
 """
-function to_toml(x; sorted=false, by=identity)
-    return sprint(to_toml, x)
+function to_toml(x; sorted=false, by=identity, include_defaults::Bool=false)
+    kwargs::Dict{Symbol, Any} = Dict([:sorted => sorted, :by => by, :include_defaults => include_defaults])
+    return sprint(to_toml, x, kwargs)
 end
 
-function to_toml(io::IO, x; sorted=false, by=identity)
-    return to_toml(toml_convert(typeof(x)), io, x; sorted=sorted, by=by)
+function to_toml(io::IO, x; sorted=false, by=identity, include_defaults=false)
+    return to_toml(toml_convert(typeof(x)), io, x; sorted=sorted, by=by, include_defaults=include_defaults)
 end
+to_toml(io::IO, x, kwargs::Dict{Symbol, Any}) = to_toml(io::IO, x; kwargs...)
 
-function to_toml(filename::String, x; sorted=false, by=identity)
-    return to_toml(toml_convert(typeof(x)), filename, x; sorted=sorted, by=by)
+function to_toml(filename::String, x; sorted=false, by=identity, include_defaults=false)
+    return to_toml(toml_convert(typeof(x)), filename, x; sorted=sorted, by=by, include_defaults=include_defaults)
 end
+to_toml(filename::String, x, kwargs::Dict{Symbol, Any}) = to_toml(filename::String, x; kwargs...)
 
 """
     to_toml([f::Function], filename::String, option; sorted=false, by=identity)
 
 Convert an instance `option` of option type to TOML and write it to `filename`. See also `TOML.print`.
 """
-function to_toml(f, filename::String, x; sorted=false, by=identity)
+function to_toml(f, filename::String, x; sorted=false, by=identity, include_defaults=false)
     open(filename, "w+") do io
-        to_toml(f, io, x; sorted=sorted, by=by)
+        to_toml(f, io, x; sorted=sorted, by=by, include_defaults=include_defaults)
     end
 end
 
@@ -147,8 +150,8 @@ end
 
 Convert an instance `option` of option type to TOML and write it to `IO`. See also `TOML.print`.
 """
-function to_toml(f, io::IO, x; sorted=false, by=identity)
-    return TOML.print(f, io, to_dict(x); sorted=sorted, by=by)
+function to_toml(f, io::IO, x; sorted=false, by=identity, include_defaults=false)
+    return TOML.print(f, io, to_dict(x; include_defaults=include_defaults); sorted=sorted, by=by)
 end
 
 @deprecate toml to_toml
@@ -158,15 +161,15 @@ end
 
 Convert `x` to an `OrderedDict`.
 """
-function dictionalize(x)
+function dictionalize(x; include_defaults=false)
     is_option(x) || return x
     d = OrderedDict{String, Any}()
     T = typeof(x)
     for name in fieldnames(T)
         type = fieldtype(T, name)
         value = getfield(x, name)
-        if value != field_default(T, name)
-            field_dict = dictionalize(value)
+        if include_defaults || value != field_default(T, name)
+            field_dict = dictionalize(value; include_defaults=include_defaults)
 
             # always add an alias if it's a Union
             # of multiple option types
