@@ -29,7 +29,23 @@ dict2 = OrderedDict{String, Any}(
     "float" => 0.33
 )
 
+dict3 = OrderedDict{String, Any}(
+    "opt" => OrderedDict{String, Any}(
+        "name" => "Roger",
+        "int" => 2,
+    ),
+    "float" => 0.3
+)
+
+dict4 = OrderedDict{String, Any}(
+    "opt" => OrderedDict{String, Any}(
+        "name" => "Roger",
+        "int" => 2,
+    ),
+)
+
 option = from_dict(OptionB, dict1)
+option3 = from_dict(OptionB, dict3)
 
 @testset "options" begin
     @test option == OptionB(;
@@ -47,12 +63,16 @@ end
     @test_throws ErrorException to_dict("aaa")
     @test to_dict(option) == dict1
     @test to_dict(from_dict(OptionB, dict2)) == dict2
+    @test to_dict(from_dict(OptionB, dict3); include_defaults=true) == dict3
+    @test to_dict(from_dict(OptionB, dict3)) == dict4
 end
 
 @testset "to_toml" begin
     @test to_toml(option) == "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
     to_toml("test.toml", option)
     @test read("test.toml", String) == "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
+    @test to_toml(option3) == "[opt]\nname = \"Roger\"\nint = 2\n"
+    @test to_toml(option3; include_defaults=true) == "float = 0.3\n\n[opt]\nname = \"Roger\"\nint = 2\n"
 end
 
 @testset "default reflection" begin
