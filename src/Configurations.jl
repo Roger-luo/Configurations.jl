@@ -107,7 +107,10 @@ toml_convert(::Type{T}) where T = x->toml_convert(T, x)
 """
     to_dict(option; include_defaults=false) -> OrderedDict
 
-Convert an option to an `OrderedDict`.
+Convert an option to an `OrderedDict`. 
+
+`to_dict` does not export fields that are of the same values as the defaults. 
+This can be overridden by changing `include_defaults` to `true`.
 """
 function to_dict(x; include_defaults=false)
     is_option(x) || error("argument is not an option type")
@@ -117,7 +120,10 @@ end
 """
     to_toml(x; sorted=false, by=identity, include_defaults=false)
 
-Convert an instance `x` of option type to TOML and write it to `String`. See also `TOML.print`.
+Convert an instance `x` of option type to TOML and write it to `String`. See also `TOML.print`. 
+
+`to_toml` does not export fields that are of the same values as the defaults. This can be 
+overridden by changing `include_defaults` to `true`.
 """
 function to_toml(x; sorted=false, by=identity, include_defaults=false)
     kwargs::Dict{Symbol, Any} = Dict([:sorted => sorted, :by => by, :include_defaults => include_defaults])
