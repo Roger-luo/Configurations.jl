@@ -127,7 +127,9 @@ overridden by changing `include_defaults` to `true`.
 """
 function to_toml(x; sorted=false, by=identity, include_defaults=false)
     kwargs::Dict{Symbol, Any} = Dict([:sorted => sorted, :by => by, :include_defaults => include_defaults])
-    return sprint(to_toml, x, kwargs)
+    return sprint(x) do x
+        to_toml(x; sorted=sorted, by=>by, include_defaults= include_defaults)
+    end
 end
 
 function to_toml(io::IO, x; sorted=false, by=identity, include_defaults=false)
