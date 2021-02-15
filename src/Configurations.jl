@@ -128,19 +128,17 @@ overridden by changing `include_defaults` to `true`.
 function to_toml(x; sorted=false, by=identity, include_defaults=false)
     kwargs::Dict{Symbol, Any} = Dict([:sorted => sorted, :by => by, :include_defaults => include_defaults])
     return sprint(x) do x
-        to_toml(x; sorted=sorted, by=>by, include_defaults= include_defaults)
+        to_toml(x; sorted=sorted, by=by, include_defaults=include_defaults)
     end
 end
 
 function to_toml(io::IO, x; sorted=false, by=identity, include_defaults=false)
     return to_toml(toml_convert(typeof(x)), io, x; sorted=sorted, by=by, include_defaults=include_defaults)
 end
-to_toml(io::IO, x, kwargs::Dict{Symbol, Any}) = to_toml(io::IO, x; kwargs...)
 
 function to_toml(filename::String, x; sorted=false, by=identity, include_defaults=false)
     return to_toml(toml_convert(typeof(x)), filename, x; sorted=sorted, by=by, include_defaults=include_defaults)
 end
-to_toml(filename::String, x, kwargs::Dict{Symbol, Any}) = to_toml(filename::String, x; kwargs...)
 
 """
     to_toml([f::Function], filename::String, option; sorted=false, by=identity, include_defaults=false)
