@@ -2,3 +2,4 @@
 /.vscode
 /test/test.toml
 /docs/build
+/docs/Manifest.toml
