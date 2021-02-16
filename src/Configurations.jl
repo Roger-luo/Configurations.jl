@@ -105,68 +105,76 @@ Curried version of `toml_convert`.
 toml_convert(::Type{T}) where T = x->toml_convert(T, x)
 
 """
-    to_dict(option) -> OrderedDict
+    to_dict(option; include_defaults=false) -> OrderedDict
 
-Convert an option to an `OrderedDict`.
+Convert an option to an `OrderedDict`. 
+
+`to_dict` does not export fields that are of the same values as the defaults. 
+This can be overridden by changing `include_defaults` to `true`.
 """
-function to_dict(x)
+function to_dict(x; include_defaults=false)
     is_option(x) || error("argument is not an option type")
-    return dictionalize(x)::OrderedDict
+    return dictionalize(x; include_defaults=include_defaults)::OrderedDict
 end
 
 """
-    to_toml(x; sorted=false, by=identity)
+    to_toml(x; sorted=false, by=identity, include_defaults=false)
 
-Convert an instance `x` of option type to TOML and write it to `String`. See also `TOML.print`.
+Convert an instance `x` of option type to TOML and write it to `String`. See also `TOML.print`. 
+
+`to_toml` does not export fields that are of the same values as the defaults. This can be 
+overridden by changing `include_defaults` to `true`.
 """
-function to_toml(x; sorted=false, by=identity)
-    return sprint(to_toml, x)
+function to_toml(x; sorted=false, by=identity, include_defaults=false)
+    return sprint(x) do io, x
+        to_toml(io, x; sorted=sorted, by=by, include_defaults=include_defaults)
+    end
 end
 
-function to_toml(io::IO, x; sorted=false, by=identity)
-    return to_toml(toml_convert(typeof(x)), io, x; sorted=sorted, by=by)
+function to_toml(io::IO, x; sorted=false, by=identity, include_defaults=false)
+    return to_toml(toml_convert(typeof(x)), io, x; sorted=sorted, by=by, include_defaults=include_defaults)
 end
 
-function to_toml(filename::String, x; sorted=false, by=identity)
-    return to_toml(toml_convert(typeof(x)), filename, x; sorted=sorted, by=by)
+function to_toml(filename::String, x; sorted=false, by=identity, include_defaults=false)
+    return to_toml(toml_convert(typeof(x)), filename, x; sorted=sorted, by=by, include_defaults=include_defaults)
 end
 
 """
-    to_toml([f::Function], filename::String, option; sorted=false, by=identity)
+    to_toml([f::Function], filename::String, option; sorted=false, by=identity, include_defaults=false)
 
 Convert an instance `option` of option type to TOML and write it to `filename`. See also `TOML.print`.
 """
-function to_toml(f, filename::String, x; sorted=false, by=identity)
+function to_toml(f, filename::String, x; sorted=false, by=identity, include_defaults=false)
     open(filename, "w+") do io
-        to_toml(f, io, x; sorted=sorted, by=by)
+        to_toml(f, io, x; sorted=sorted, by=by, include_defaults=include_defaults)
     end
 end
 
 """
-    to_toml([f::Function], io::IO, option; sorted=false, by=identity)
+    to_toml([f::Function], io::IO, option; sorted=false, by=identity, include_defaults=false)
 
 Convert an instance `option` of option type to TOML and write it to `IO`. See also `TOML.print`.
 """
-function to_toml(f, io::IO, x; sorted=false, by=identity)
-    return TOML.print(f, io, to_dict(x); sorted=sorted, by=by)
+function to_toml(f, io::IO, x; sorted=false, by=identity, include_defaults=false)
+    return TOML.print(f, io, to_dict(x; include_defaults=include_defaults); sorted=sorted, by=by)
 end
 
 @deprecate toml to_toml
 
 """
-    dictionalize(x)
+    dictionalize(x; include_defaults=false)
 
 Convert `x` to an `OrderedDict`.
 """
-function dictionalize(x)
+function dictionalize(x; include_defaults=false)
     is_option(x) || return x
     d = OrderedDict{String, Any}()
     T = typeof(x)
     for name in fieldnames(T)
         type = fieldtype(T, name)
         value = getfield(x, name)
-        if value != field_default(T, name)
-            field_dict = dictionalize(value)
+        if include_defaults || value != field_default(T, name)
+            field_dict = dictionalize(value; include_defaults=include_defaults)
 
             # always add an alias if it's a Union
             # of multiple option types
