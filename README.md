@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/Roger-luo/Configurations.jl/workflows/CI/badge.svg)](https://github.com/Roger-luo/Configurations.jl/actions)
 [![codecov](https://codecov.io/gh/Roger-luo/Configurations.jl/branch/master/graph/badge.svg?token=U604BQGRV1)](https://codecov.io/gh/Roger-luo/Configurations.jl)
+[![][docs-dev-img]][docs-dev-url]
 
 Configurations & Options made easy.
 
@@ -125,3 +126,6 @@ Or serialize it to other format from `OrderedDict`.
 ## License
 
 MIT License
+
+[docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
+[docs-dev-url]: https://rogerluo.me/Comonicon.jl/dev/
