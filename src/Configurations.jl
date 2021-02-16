@@ -126,8 +126,8 @@ Convert an instance `x` of option type to TOML and write it to `String`. See als
 overridden by changing `include_defaults` to `true`.
 """
 function to_toml(x; sorted=false, by=identity, include_defaults=false)
-    return sprint(x) do x
-        to_toml(x; sorted=sorted, by=by, include_defaults=include_defaults)
+    return sprint(x) do io, x
+        to_toml(io, x; sorted=sorted, by=by, include_defaults=include_defaults)
     end
 end
 
