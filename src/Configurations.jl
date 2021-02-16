@@ -114,8 +114,11 @@ toml_convert(::Type{T}) where T = x->toml_convert(T, x)
 
 Convert an option to an `OrderedDict`. 
 
-`to_dict` does not export fields that are of the same values as the defaults. 
-This can be overridden by changing `include_defaults` to `true`.
+!!! tips
+    `to_dict` does not export fields that are of the same values as the defaults. 
+    In most cases, this should be the default behaviour, and users should not use
+    `include_defaults`, however,  this can be overridden by changing `include_defaults`
+    to `true`.
 """
 function to_dict(x; include_defaults=false)
     is_option(x) || error("argument is not an option type")
