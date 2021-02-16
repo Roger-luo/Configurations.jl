@@ -128,4 +128,4 @@ Or serialize it to other format from `OrderedDict`.
 MIT License
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
-[docs-dev-url]: https://rogerluo.me/Comonicon.jl/dev/
+[docs-dev-url]: https://rogerluo.me/Configurations.jl/dev/
