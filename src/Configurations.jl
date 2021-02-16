@@ -62,6 +62,11 @@ function field_alias(::Type{T}, name::Symbol) where {T}
     error("field_alias is not defined for $T, it may not be an option type")
 end
 
+"""
+    alias(::Type{OptionType}) -> String
+
+Return the alias name of given `OptionType`.
+"""
 function alias(::Type{T}) where T
     error("alias is not defined $T, it may not be an option type")
 end
@@ -536,6 +541,11 @@ function Base.show(io::IO, x::OptionDef)
     print(io, " "^indent, BLUE_FG("end"))
 end
 
+"""
+    OptionDef(ex, alias=nothing)
+
+Create an `OptionDef` from given Julia `Expr`
+"""
 function OptionDef(@nospecialize(ex), alias=nothing)
     ex isa Expr || error("invalid usage of @option")
     ex.head === :struct || error("invalid usage of @option")
@@ -632,6 +642,11 @@ function split_body(ex::Expr)
     return fields, misc
 end
 
+"""
+    codegen_struct_def(x::OptionDef)
+
+generate the struct (composite type) definition.
+"""
 function codegen_struct_def(x::OptionDef)
     T = x.name
 
@@ -713,6 +728,29 @@ function get_kw_expr(def::OptionDef)
     return kwargs
 end
 
+"""
+    codegen_kw_fn(x::OptionDef)
+
+Generate the keyword constructor function definition.
+
+# Example
+
+```julia
+julia> ex = :(struct Foo
+       x::Int = 2
+       end);
+
+julia> x = OptionDef(ex)
+struct Foo
+  x::Int = 2
+end
+
+julia> codegen_kw_fn(x)
+:(function Foo(; x = 2)
+      Foo(x)
+  end)
+```
+"""
 function codegen_kw_fn(x::OptionDef)
     isempty(x.fields) && return
     has_custom_kw_fn(x) && return
@@ -788,6 +826,12 @@ function option_print(io::IO, m::MIME, list::Vector)
     print(io, " "^(indent), "]")
 end
 
+"""
+    codegen_show_text(x::OptionDef)
+
+Generate `Base.show` overloading for given type for the default
+printing syntax.
+"""
 function codegen_show_text(x::OptionDef)
     body = quote
         head_indent = get(io, :head_indent, 0)
@@ -849,6 +893,11 @@ function codegen_show_text(x::OptionDef)
     return combinedef(def)
 end
 
+"""
+    codegen_is_option(x::OptionDef)
+
+Generate the [`is_option`](@ref) method.
+"""
 function codegen_is_option(x::OptionDef)
     quote
         $(GlobalRef(Configurations, :is_option))(::$(x.name)) = true
@@ -856,6 +905,11 @@ function codegen_is_option(x::OptionDef)
     end
 end
 
+"""
+    codegen_convert(x::OptionDef)
+
+Generate `Base.convert` from `AbstractDict{String}` to the given option type.
+"""
 function codegen_convert(x::OptionDef)
     :(Base.convert(::Type{<:$(x.name)}, d::AbstractDict{String}) = $(GlobalRef(Configurations, :from_dict))($(x.name), d))
 end
@@ -898,6 +952,11 @@ function resolve_defaults(x::OptionDef)
     return map
 end
 
+"""
+    codegen_field_default(x::OptionDef)
+
+Generate the default value reflection method [`field_default`](@ref).
+"""
 function codegen_field_default(x::OptionDef)
     dmap = resolve_defaults(x)
     obj = gensym(:x)
@@ -938,6 +997,11 @@ function codegen_field_default(x::OptionDef)
     return combinedef(def)
 end
 
+"""
+    codegen_field_alias(x::OptionDef)
+
+Generate the field alias method [`field_alias`](@ref).
+"""
 function codegen_field_alias(x::OptionDef)
     obj = gensym(:x)
     msg = Expr(:string, "type $(x.name) does not have field ", obj)
@@ -976,6 +1040,11 @@ function codegen_field_alias(x::OptionDef)
     return combinedef(def)
 end
 
+"""
+    codegen_alias(x::OptionDef)
+
+Generate type alias method [`alias`](@ref).
+"""
 function codegen_alias(x::OptionDef)
     def = Dict(
         :name => GlobalRef(Configurations, :alias),
@@ -996,6 +1065,12 @@ function create(::Type{T}; kwargs...) where T
     error("$T is not an option type")
 end
 
+
+"""
+    codegen_create(x::OptionDef)
+
+Generate option type creation method [`create`](@ref).
+"""
 function codegen_create(x::OptionDef)
     def = Dict(
         :name => GlobalRef(Configurations, :create),
@@ -1026,10 +1101,22 @@ function compare_options(a::A, b::A) where {A}
     return true
 end
 
+"""
+    codegen_isequal(x::OptionDef)
+
+Generate `Base.:(==)` to overload comparison operator to [`compare_options`](@ref)
+for given option type.
+"""
 function codegen_isequal(x::OptionDef)
     return :(Base.:(==)(a::$(x.name), b::$(x.name)) = $compare_options(a, b))
 end
 
+"""
+    codegen_show_toml_mime(x::OptionDef)
+
+Forward `Base.show(io::IO, ::MIME"application/toml", x::YourOptionType)` to
+[`to_toml`](@ref).
+"""
 function codegen_show_toml_mime(x::OptionDef)
     :(
         function Base.show(io::IO, ::MIME"application/toml", x::$(x.name))
