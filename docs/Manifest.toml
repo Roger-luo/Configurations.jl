@@ -13,7 +13,7 @@ uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 deps = ["Crayons", "ExprTools", "MatchCore", "OrderedCollections", "TOML"]
 path = ".."
 uuid = "5218b696-f38b-4ac9-8b61-a12ec717816d"
-version = "0.9.0"
+version = "0.10.0"
 
 [[Crayons]]
 git-tree-sha1 = "3f71217b538d7aaee0b69ab47d9b7724ca8afa0d"
@@ -32,9 +32,9 @@ version = "0.8.3"
 
 [[Documenter]]
 deps = ["Base64", "Dates", "DocStringExtensions", "IOCapture", "InteractiveUtils", "JSON", "LibGit2", "Logging", "Markdown", "REPL", "Test", "Unicode"]
-git-tree-sha1 = "b7715ae18be02110a8cf9cc8ed2ccdb1e3e3aba2"
+git-tree-sha1 = "21fb992ef1b28ff8f315354d3808ebf4a8fa6e45"
 uuid = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-version = "0.26.1"
+version = "0.26.2"
 
 [[Downloads]]
 deps = ["ArgTools", "LibCURL", "NetworkOptions"]
@@ -106,9 +106,9 @@ uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 
 [[OrderedCollections]]
-git-tree-sha1 = "cf59cfed2e2c12e8a2ff0a4f1e9b2cd8650da6db"
+git-tree-sha1 = "4fa2ba51070ec13fcc7517db714445b4ab986bdf"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
-version = "1.3.2"
+version = "1.4.0"
 
 [[Parsers]]
 deps = ["Dates"]
