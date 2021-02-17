@@ -122,7 +122,7 @@ Convert an option to an `OrderedDict`.
 """
 function to_dict(x; include_defaults=false)
     is_option(x) || error("argument is not an option type")
-    return dictionalize(x; include_defaults=include_defaults)::OrderedDict
+    return dictionalize(x, include_defaults)::OrderedDict
 end
 
 """
@@ -170,11 +170,16 @@ end
 @deprecate toml to_toml
 
 """
-    dictionalize(x; include_defaults=false)
+    dictionalize(x, include_defaults=false)
 
 Convert `x` to an `OrderedDict`.
+
+!!! note
+
+    This is only for internal usage, for overloading one
+    should overload [`to_dict`](@ref) for custom conversion.
 """
-function dictionalize(x; include_defaults=false)
+function dictionalize(x, include_defaults=false)
     is_option(x) || return x
     d = OrderedDict{String, Any}()
     T = typeof(x)
@@ -182,7 +187,7 @@ function dictionalize(x; include_defaults=false)
         type = fieldtype(T, name)
         value = getfield(x, name)
         if include_defaults || value != field_default(T, name)
-            field_dict = dictionalize(value; include_defaults=include_defaults)
+            field_dict = dictionalize(value, include_defaults)
 
             # always add an alias if it's a Union
             # of multiple option types
