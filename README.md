@@ -26,11 +26,13 @@ pkg> add Configurations
 ## Usage
 
 This package provides a macro `@option` to let you define `struct`s to represent options/configurations, and serialize between
-different option/configuration file format, such as `TOML`, e.g
+different option/configuration file formats such as `TOML`.
 
-You can easily create hierarchical struct types as following
+You can easily create hierarchical struct types:
 
 ```julia
+julia> using Configurations
+
 julia> "Option A"
        @option "option_a" struct OptionA
            name::String
@@ -44,7 +46,7 @@ julia> "Option B"
        end
 ```
 
-and convert a dict to an option type via [`from_dict`](@ref).
+and then convert from a `Dict` to your option type via [`from_dict`](@ref):
 
 ```julia
 julia> d = Dict{String, Any}(
@@ -65,7 +67,7 @@ OptionB(;
 )
 ```
 
-when there are multiple possible option type for one field,
+When there are multiple possible option types for one field,
 one can use the alias to distinguish them
 
 ```julia
@@ -91,7 +93,7 @@ OptionD(;
 )
 ```
 
-Or you can also create it from keyword arguments, e.g
+Or you can create it from keyword arguments, e.g
 
 ```julia
 julia> from_kwargs(OptionB; opt_name="Roger", opt_int=2, float=0.33)
@@ -104,7 +106,7 @@ OptionB(;
 )
 ```
 
-for option types you can always convert `AbstractDict` to a given option type,
+For option types you can always convert an `AbstractDict` to a given option type,
 or convert them back to dictionary via `to_dict`, e.g
 
 ```julia
@@ -114,14 +116,14 @@ OrderedDict{String, Any} with 2 entries:
   "float" => 0.33
 ```
 
-for serialization, you can use the builtin TOML support
+For serialization, you can use the builtin TOML support
 
 ```julia
 julia> to_toml(option)
 "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
 ```
 
-Or serialize it to other format from `OrderedDict`.
+or serialize it to other formats from `OrderedDict`.
 
 ## License
 
