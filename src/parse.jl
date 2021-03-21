@@ -127,7 +127,6 @@ function from_dict_inner(::Type{T}, @nospecialize(d)) where T
     args = Any[]
     for each in fieldnames(T)
         key = string(each)
-        key = haskey(d, key) ? key : field_alias(T, each)
         type = fieldtype(T, each)
         default = field_default(T, each)
  

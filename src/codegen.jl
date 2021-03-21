@@ -130,7 +130,6 @@ function codegen_field_default(def::JLKwStruct)
     isconst = Dict{Symbol, Bool}()
     default = Dict{Symbol, Any}()
     prev_field_names = Symbol[]
-    obj = gensym(:x)
 
     for (k, field) in enumerate(def.fields)
         vars = Symbol[]
@@ -160,11 +159,16 @@ function codegen_field_default(def::JLKwStruct)
         push!(prev_field_names, field.name)
     end
 
+    type = gensym(:type)
+    typevars = name_only.(def.typevars)
+    ub = isempty(def.typevars) ? def.name : Expr(:curly, def.name, typevars...)
+
     return codegen_ast(
         JLFunction(;
             name=GlobalRef(Configurations, :field_default),
-            args=[:(::Type{<:$(def.name)}), :($obj::Symbol)],
-            body=codegen_ast(ret)
+            args=[:(::Type{$type}), :($obj::Symbol)],
+            body=codegen_ast(ret),
+            whereparams=[typevars..., :($type <: $ub)],
         )
     )
 end

@@ -1,7 +1,8 @@
 using Configurations
-using Configurations: OptionDef, to_dict, to_toml, from_kwargs, from_dict, alias,
+using Expronicon.Types
+using Configurations: to_dict, from_kwargs, from_dict, alias,
     from_toml, no_default, field_defaults, field_default, field_alias, field_aliases,
-    option_print, resolve_defaults, PartialDefault
+    show_option, PartialDefault
 using OrderedCollections
 using Test
 
@@ -60,7 +61,7 @@ option3 = from_dict(OptionB, dict3)
 end
 
 @testset "to_dict" begin
-    @test_throws ErrorException to_dict("aaa")
+    @test to_dict("aaa") == "aaa"
     @test to_dict(option) == dict1
     @test to_dict(from_dict(OptionB, dict2)) == dict2
     @test to_dict(from_dict(OptionB, dict3); include_defaults=true) == dict3
@@ -229,11 +230,11 @@ end
 end
 
 function foo(::Type{T}) where T
-    return 1.0
+    return 1
 end
 
 function foo(::Type{Int})
-    return 2
+    return 2.0
 end
 
 @option struct Inferrable{A, B}
@@ -247,11 +248,6 @@ end
 end
 
 @option struct NotInferrable2{T}
-    a::T = foo(T)
-    b::Int
-end
-
-@option struct NotInferrable3{T}
     a::Float64 = foo(T)
     b::Int
 end
@@ -266,12 +262,12 @@ end
     # @test_throws ErrorException field_default(Inferrable, :a)
     @test_throws MethodError NotInferrable1(;a = 1.0, b = 1)
     @test NotInferrable1{Int}(;a = 1.0, b = 1) == NotInferrable1{Int64}(1.0, 1)
-    @test_throws MethodError NotInferrable2(;a = 1.0, b = 2)
-    @test NotInferrable2{Float64}(;b=2) == NotInferrable2(1.0, 2)
-    @test_throws MethodError NotInferrable3(;a = 1.0, b = 1)
+
+    @test_throws MethodError NotInferrable2(;a = 1.0, b = 1)
     @test field_default(NotInferrable2{Int}, :a) == 2
     @test field_default(NotInferrable2{Float64}, :a) == 1.0
-    @test NotInferrable3{Int}(;b = 2) == NotInferrable3{Int}(2.0, 2)   
+    @test NotInferrable2{Int}(;b = 2) == NotInferrable2{Int}(2.0, 2)
+    @test_throws MethodError NotInferrable2{Float64}(;b = 2)
 end
 
 @option struct Empty end
@@ -316,49 +312,13 @@ end
 end
 
 @testset "default resolve" begin
-    @test field_default(DefaultResolve, :b) == sin(1)    
-end
-
-@option struct FieldAlias
-    "alpha"
-    α::Float64 = 1
-    "beta"
-    β::Float64
-end
-
-@testset "field alias" begin
-    d = Dict("alpha" => 2, "beta" => 3)
-    @test from_dict(FieldAlias, d) == FieldAlias(;α=2, β=3)
-    @test field_aliases(FieldAlias) == ["alpha", "beta"]
+    @test field_default(DefaultResolve, :b)(1) == sin(1)    
 end
 
 @testset "non-option type handling" begin
     @test_throws ErrorException field_default(Int, :a)
     @test_throws ErrorException field_alias(Int, :a)
-    @test_throws ErrorException alias(Int)
-end
-
-@testset "printings" begin
-    ex = :(struct OptionA
-        name::String
-        int::Int = 1
-    end)
-    def = OptionDef(ex)
-    print(def)
-
-    ex = :(struct Inferrable{A, B}
-        a::A
-        b::B = 1.0
-    end)
-    def = OptionDef(ex)
-    print(def)
-
-    show(stdout, MIME"text/plain"(), FieldAlias(;β=2.0))
-    show(stdout, MIME"text/plain"(), OptionB())
-    option_print(stdout, MIME"text/plain"(), 1)
-    option_print(stdout, MIME"text/plain"(), Dict("a"=>1))
-    option_print(stdout, MIME"text/plain"(), [1, 2, 3])
-    option_print(stdout, MIME"text/plain"(), rand(2, 2))
+    @test_throws ErrorException type_alias(Int)
 end
 
 @option struct UnionToDict
@@ -397,5 +357,24 @@ end
 
 @testset "partial default" begin
     x = DefaultFunction(;a=1.0, b=2.0)
-    @test field_default(DefaultFunction, :b)(x) == sin(1.0)
+    @test field_default(DefaultFunction, :b)(1.0) == sin(1.0)
 end
+
+@option struct Print1
+    list::Vector{Int} = [1, 2, 3]
+    dict::Dict{String, Any} = Dict{String, Any}("a"=>1, "b"=>"2")
+end
+
+@option struct Print2
+    list::Vector{Int} = [1, 2, 3]
+    dict::Dict{String, Any}
+    nest::Print1 = Print1()
+end
+
+show(stdout, MIME"text/plain"(),
+    Print2(;
+        list=[1,2,3,4,5],
+        nest=Print1(;list=[1, 2]),
+        dict=Dict{String, Any}("a"=>1, "b"=>"2")
+    )
+)

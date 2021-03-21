@@ -1,13 +1,3 @@
-"""
-    NoDefault
-
-Type represents a field that has no default value. See also [`no_default`](@ref).
-"""
-struct NoDefault end
-
-"const for non default fields"
-const no_default = NoDefault()
-
 "maybe of type `T` or nothing"
 const Maybe{T} = Union{Nothing, T}
 
@@ -25,7 +15,7 @@ end
 (f::PartialDefault)(x) = f.lambda(x)
 
 function Base.show(io::IO, x::PartialDefault)
-    print(io, JLFunction(;args=x.vars, body=x.expr))
+    print(io, JLFunction(;head=:->, args=x.vars, body=x.expr))
 end
 
 """
