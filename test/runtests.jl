@@ -61,7 +61,7 @@ option3 = from_dict(OptionB, dict3)
 end
 
 @testset "to_dict" begin
-    @test to_dict("aaa") == "aaa"
+    @test_throws ErrorException to_dict("aaa")
     @test to_dict(option) == dict1
     @test to_dict(from_dict(OptionB, dict2)) == dict2
     @test to_dict(from_dict(OptionB, dict3); include_defaults=true) == dict3

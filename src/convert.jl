@@ -1,5 +1,5 @@
 """
-    option_convert(::Type{OptionType}, ::Type{ValueType}, x) where {OptionType, ValueType}
+    convert_to_option(::Type{OptionType}, ::Type{ValueType}, x) where {OptionType, ValueType}
 
 Convert `x` to type `ValueType` for option type `OptionType`. This is similar to `Base.convert`,
 when creating an instance of the option type, but one can use this to avoid type piracy.

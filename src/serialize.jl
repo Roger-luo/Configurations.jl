@@ -1,3 +1,7 @@
+function assert_option(x)
+    is_option(x) || error("$(typeof(x)) is not an option type")
+end
+
 """
     to_dict(option; include_defaults=false) -> OrderedDict
 
@@ -9,15 +13,65 @@ Convert an object to an `OrderedDict`.
     `include_defaults`, however,  this can be overridden by changing `include_defaults`
     to `true`.
 """
-to_dict(x; include_defaults::Bool=false) = to_dict(x, include_defaults)
-to_dict(x::Union{String, Int, Float64}) = x # TOML compatible types
-to_dict(x::VersionNumber) = string(x)
+function to_dict(x; include_defaults::Bool=false)
+    assert_option(x)
+    return to_dict(typeof(x), x, include_defaults)
+end
 
-function to_dict(x, include_defaults)
-    if !is_option(x)
-        x isa OrderedDict || error("method to_dict is not overloaded for non-option type $(typeof(x))")
+"""
+    to_dict(::Type{T}, x, include_defaults::Bool) where T
+
+Convert `x` when `x` is inside an option type `T`. `include_defaults`
+is a flag to determine whether to include the default values. this can
+be overloaded to change the behaviour of `to_dict(x; include_defaults)`.
+
+    to_dict(::Type{T}, x) where T
+
+One can also use the 2-arg version when `x` is not or does not
+contain an option type for convenience.
+
+# Example
+
+The following is a builtin overload to handle list of options.
+
+```julia
+function Configurations.to_dict(::Type{T}, x::Vector, include_defaults::Bool) where T
+    if is_option(eltype(x))
+        return map(p->to_dict(T, p, include_defaults), x)
+    else
         return x
     end
+end
+```
+
+The following overloads the 2-arg `to_dict` to convert all `VersionNumber` to
+a `String` for all kinds of option types.
+
+```julia
+Configurations.to_dict(::Type, x::VersionNumber) = string(x)
+```
+"""
+function to_dict(::Type{T}, x, include_defaults::Bool) where T
+    if is_option(x)
+        return _option_to_dict(x, include_defaults)
+    else
+        return to_dict(T, x) # fall through 2-arg version
+    end
+end
+
+to_dict(::Type, x) = x
+
+# handle list of options as builtin
+function to_dict(::Type{T}, x::Vector, include_defaults::Bool) where T
+    if is_option(eltype(x))
+        return map(p->to_dict(T, p, include_defaults), x)
+    else
+        return x
+    end
+end
+
+function _option_to_dict(x, include_defaults)
+    assert_option(x)
 
     d = OrderedDict{String, Any}()
     T = typeof(x)
@@ -25,11 +79,7 @@ function to_dict(x, include_defaults)
         type = fieldtype(T, name)
         value = getfield(x, name)
         if include_defaults || value != field_default(T, name)
-            if is_option(value)
-                field_dict = to_dict(value, include_defaults)
-            else
-                field_dict = to_dict(value)
-            end
+            field_dict = to_dict(T, value, include_defaults)
 
             # always add an alias if it's a Union
             # of multiple option types
