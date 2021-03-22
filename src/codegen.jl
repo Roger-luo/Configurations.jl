@@ -87,7 +87,7 @@ function option_m(ex, type_alias=nothing)
         $(codegen_is_option(def))
         $(codegen_convert(def))
         $(codegen_field_default(def))
-        $(codegen_field_alias(def))
+        # $(codegen_field_alias(def))
         $(codegen_type_alias(def))
         $(codegen_isequal(def))
         # pretty printings
@@ -173,8 +173,8 @@ function codegen_field_default(def::JLKwStruct)
     )
 end
 
-function codegen_field_alias(def::JLKwStruct)
-end
+# function codegen_field_alias(def::JLKwStruct)
+# end
 
 """
     codegen_isequal(x::JLKwStruct)

@@ -9,22 +9,6 @@ specific cases requires one to use `Configurations`'s advanced API.
 
 
 ## Alias
-### Field Name Alias
-
-Sometimes, the `struct` field name is defined using a UTF-8 character such as `Ω`. It may cause
-incompatibility when converting to other format such as JSON/TOML or just a `Dict` for JSON-based
-REST API.
-
-You can define an alias for the field in this case using the following syntax
-
-```julia
-@option struct MyType
-    "alpha"
-    α::Int
-    "omega"
-    Ω::Float64 = 1.0
-end
-```
 
 ### Option Type Alias
 
@@ -76,23 +60,18 @@ such as the printing, etc.
 In this case, you can construct your own macro using the code generation passes defined in
 `Configurations`. The code generation passes API starts with `codegen_`.
 
-`Configurations` uses an intermediate representation to represent user defined option types,
-which is the `OptionDef` struct:
-
-```@docs
-OptionDef
-OptionDef(ex, alias)
-```
+`Configurations` uses an intermediate representation defined by [Expronicon](https://github.com/Roger-luo/Expronicon.jl) to represent user defined option types,
+which is the `JLKwStruct` struct.
 
 ### Builtin Code Generator
 
 ```@docs
-codegen_struct_def
-codegen_kw_fn
-codegen_field_default
-codegen_field_alias
-codegen_alias
+codegen_ast
 codegen_create
+codegen_is_option
+codegen_convert
+codegen_field_default
+codegen_type_alias
 codegen_isequal
-codegen_show_toml_mime
+codegen_show
 ```
