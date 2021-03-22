@@ -58,6 +58,9 @@ option3 = from_dict(OptionB, dict3)
     )
 
     @test from_toml(OptionB, "option.toml") == option
+    @test from_toml_if_exists(OptionB, "option.toml") == option
+    @test from_toml_if_exists(OptionB, "not_exist.toml";
+        opt_name="Roger", opt_int=2, float=0.33) == option
 end
 
 @testset "to_dict" begin

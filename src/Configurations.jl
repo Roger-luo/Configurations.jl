@@ -26,6 +26,7 @@ export no_default,
     from_dict,
     from_kwargs,
     from_toml,
+    from_toml_if_exists,
     # serialize
     to_dict
 
