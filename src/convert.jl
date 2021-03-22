@@ -4,18 +4,18 @@
 Convert `x` to type `ValueType` for option type `OptionType`. This is similar to `Base.convert`,
 when creating an instance of the option type, but one can use this to avoid type piracy.
 """
-option_convert(::Type, ::Type{A}, x) where {A} = nothing
+convert_to_option(::Type, ::Type{A}, x) where {A} = nothing
 
-option_convert(::Type, ::Type{VersionNumber}, x::String) = VersionNumber(x)
+convert_to_option(::Type, ::Type{VersionNumber}, x::String) = VersionNumber(x)
 
-function option_convert_union(::Type{T}, ::Type{A}, x) where {T, A}
+function convert_union_to_option(::Type{T}, ::Type{A}, x) where {T, A}
     if !(A isa Union)
-        v = option_convert(T, A, x)
+        v = convert_to_option(T, A, x)
         v === nothing || return v
         return
     end
 
-    v = option_convert_union(T, A.a, x)
+    v = convert_union_to_option(T, A.a, x)
     v === nothing || return v
-    return option_convert_union(T, A.b, x)
+    return convert_union_to_option(T, A.b, x)
 end

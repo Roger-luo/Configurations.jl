@@ -87,7 +87,7 @@ end
 
 Pick a type `T` and its corresponding value from a `Union`. For option
 types it should be a dictionary type. The value can be furthur converted
-to this type `T` via [`option_convert`](@ref) or `Base.convert`.
+to this type `T` via [`convert_to_option`](@ref) or `Base.convert`.
 """
 pick_union(::Type{T}, x) where T = T, x
 
@@ -159,7 +159,7 @@ function from_dict_inner(::Type{T}, @nospecialize(d)) where T
             # empty collection
             push!(args, nothing)
         else
-            v = option_convert_union(T, type, value)
+            v = convert_union_to_option(T, type, value)
             if v === nothing
                 push!(args, convert(type, value))
             else
