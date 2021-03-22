@@ -45,6 +45,20 @@ function from_toml(::Type{T}, filename::String; kw...) where T
 end
 
 """
+    from_toml_if_exists(::Type{T}, filename::String; kw...) where T
+
+Similar to [`from_toml`](@ref) but will create the option instance
+via `from_kwargs(T;kw...)` instead of error if the file does not exist.
+"""
+function from_toml_if_exists(::Type{T}, filename::String; kw...) where T
+    if isfile(filename)
+        return from_toml(T, filename; kw...)
+    else
+        return from_kwargs(T;kw...)
+    end
+end
+
+"""
     from_kwargs(::Type{T}; kw...) where T
 
 Convert keyword arguments to given option type `T`. See also [`from_dict`](@ref).
