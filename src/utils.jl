@@ -1,6 +1,3 @@
-struct NotOption end
-struct IsaOption end
-
 """
     is_option(x)
 
