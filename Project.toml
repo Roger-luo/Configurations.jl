@@ -5,15 +5,13 @@ version = "0.11.0"
 
 [deps]
 Crayons = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
-ExprTools = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
-MatchCore = "5dd3f0b1-72a9-48ad-ae6e-79f673da005f"
+Expronicon = "6b7a57c9-7cc1-4fdf-b7f5-e857abae3636"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
 Crayons = "4.0"
-ExprTools = "0.1"
-MatchCore = "0.1"
+Expronicon = "0.2"
 OrderedCollections = "1.3"
 TOML = "1"
 julia = "1"
