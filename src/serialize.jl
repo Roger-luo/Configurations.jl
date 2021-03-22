@@ -11,6 +11,7 @@ Convert an object to an `OrderedDict`.
 """
 to_dict(x; include_defaults::Bool=false) = to_dict(x, include_defaults)
 to_dict(x::Union{String, Int, Float64}) = x # TOML compatible types
+to_dict(x::VersionNumber) = string(x)
 
 function to_dict(x, include_defaults)
     if !is_option(x)
