@@ -32,7 +32,7 @@ export no_default,
 include("types.jl")
 include("convert.jl")
 include("reflection.jl")
-include("traits.jl")
+include("utils.jl")
 include("parse.jl")
 include("codegen.jl")
 include("serialize.jl")

@@ -87,7 +87,6 @@ function option_m(ex, type_alias=nothing)
         $(codegen_is_option(def))
         $(codegen_convert(def))
         $(codegen_field_default(def))
-        # $(codegen_field_alias(def))
         $(codegen_type_alias(def))
         $(codegen_isequal(def))
         # pretty printings
@@ -115,8 +114,9 @@ Generate `Base.convert` from `AbstractDict{String}` to the given option type.
 """
 function codegen_convert(def::JLKwStruct)
     quote
-        $Base.convert(::Type{<:$(def.name)}, d::AbstractDict{String}) =
+        function $Base.convert(::Type{<:$(def.name)}, d::AbstractDict{String})
             $Configurations.from_dict($(def.name), d)
+        end
     end
 end
 
