@@ -206,7 +206,7 @@ end
 
     @test_throws MethodError from_dict(Ion, d)
 
-    function Configurations.option_convert(::Type{Julia}, ::Type{Dict{VersionNumber,String}}, x::Dict{String,String})
+    function Configurations.convert_to_option(::Type{Julia}, ::Type{Dict{VersionNumber,String}}, x::Dict{String,String})
         d = Dict{VersionNumber, String}()
         for (k, v) in x
             d[VersionNumber(k)] = v
