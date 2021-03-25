@@ -27,7 +27,7 @@ OptionA(;
 function from_dict(::Type{T}, d::AbstractDict{String}; kw...) where T
     # override dict values
     validate_keywords(T; kw...)
-    from_kwargs!(d, T; kw...)
+    from_kwargs!(deepcopy(d), T; kw...)
     return from_dict_validate(T, d)
 end
 
