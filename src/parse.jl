@@ -27,7 +27,7 @@ OptionA(;
 function from_dict(::Type{T}, d::AbstractDict{String}; kw...) where T
     # override dict values
     validate_keywords(T; kw...)
-    from_kwargs!(d, T; kw...)
+    from_kwargs!(deepcopy(d), T; kw...)
     return from_dict_validate(T, d)
 end
 
@@ -211,6 +211,10 @@ function from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} 
 
         if is_option(type) || type isa Union
             field_d = OrderedDict{String, Any}()
+            if haskey(d, string(name)) && d[string(name)] isa AbstractDict
+                field_d = merge!(field_d, d[string(name)])
+            end
+
             from_kwargs!(field_d, type, key; kw...)
             if !isempty(field_d)
                 d[string(name)] = field_d
