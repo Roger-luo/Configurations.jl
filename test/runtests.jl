@@ -18,6 +18,34 @@ end
     float::Float64 = 0.3
 end
 
+@option struct OptionC
+    num::Float64
+
+    function OptionC(num::Float64)
+        num > 0 || error("not positive")
+        new(num)
+    end
+end
+
+@option struct OptionD
+    opt::Union{OptionA, OptionB}
+end
+
+@option struct OptionE
+    field::Union{Nothing, OptionA} = nothing
+end
+
+@option struct OptionF
+    name::Union{Nothing,String}=nothing
+    int::Int = 1
+end
+
+@option struct OptionG
+    opt::OptionF = OptionF()
+    name::String = "ABC"
+end
+
+
 dict1 = OrderedDict{String, Any}(
     "opt" => OrderedDict{String, Any}(
         "name" => "Roger",
@@ -88,23 +116,25 @@ end
 
 @testset "from_kwargs" begin
     @test Configurations.from_kwargs(OptionB; opt_name="Roger", opt_int=2, float=0.33) == option
-end
 
-@option struct OptionC
-    num::Float64
+    @test Configurations.from_kwargs(OptionG;name="AAA", opt_name="Roger") == OptionG(;
+        opt = OptionF(;
+            name = "Roger",
+        ),
+        name = "AAA",
+    )
 
-    function OptionC(num::Float64)
-        num > 0 || error("not positive")
-        new(num)
-    end
+    @test_throws ErrorException Configurations.from_field_kwargs(OptionG;name="AAA")
+
+    @test Configurations.from_field_kwargs(OptionB;name="AAA") == OptionB(;
+        opt = OptionA(;
+            name = "AAA",
+        ),
+    )
 end
 
 @testset "inside constructor" begin
     @test_throws ErrorException OptionC(-1.0)
-end
-
-@option struct OptionD
-    opt::Union{OptionA, OptionB}
 end
 
 @testset "test multi option type" begin
@@ -137,10 +167,6 @@ end
     )
 
     @test_throws ErrorException from_dict(OptionD, d3)
-end
-
-@option struct OptionE
-    field::Union{Nothing, OptionA} = nothing
 end
 
 @testset "optional field" begin
