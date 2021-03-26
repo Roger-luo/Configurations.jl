@@ -97,6 +97,7 @@ end
     @test to_dict(from_dict(OptionB, dict2)) == dict2
     @test to_dict(from_dict(OptionB, dict3); include_defaults=true) == dict3
     @test to_dict(from_dict(OptionB, dict3)) == dict4
+    @test to_dict(OptionF(); include_defaults=true, exclude_nothing=true) == OrderedDict{String, Any}("int"=>1)
 end
 
 @testset "to_toml" begin
