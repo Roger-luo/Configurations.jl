@@ -260,7 +260,7 @@ function from_kwargs_option_key!(f, d::AbstractDict, ::Type{T}, name::Symbol, ke
     
     if is_option(T)
         field_d = OrderedDict{String, Any}()
-        if haskey(d, name)
+        if haskey(d, name_str)
             d[name_str] isa AbstractDict || error("option $key_str must be specified using an AbstractDict")
             field_d = merge!(field_d, d[name_str])
         end
@@ -279,7 +279,7 @@ end
 function validate_keywords(::Type{T}, keys = underscore_keywords(T); kw...) where T
     if length(keys) > 8
         hint = join(map(x->LIGHT_BLUE_FG(string(x)), keys[1:8]), ", ")
-        hint *= "..."
+        hint *= "... please check documentation for other valid keys"
     else
         hint = join(map(x->LIGHT_BLUE_FG(string(x)), keys), ", ")
     end

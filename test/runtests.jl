@@ -124,13 +124,24 @@ end
         name = "AAA",
     )
 
-    @test_throws ErrorException Configurations.from_field_kwargs(OptionG;name="AAA")
+    d = Configurations.from_kwargs!(OrderedDict{String, Any}(), OptionG; name="AAA", opt_name="Roger")
+    @test d["name"] == "AAA"
+    @test d["opt"]["name"] == "Roger"
 
-    @test Configurations.from_field_kwargs(OptionB;name="AAA") == OptionB(;
-        opt = OptionA(;
-            name = "AAA",
-        ),
-    )
+    # error for wrong specification when we can't overwrite
+    d = OrderedDict{String, Any}("opt"=>"AAA")
+    @test_throws ErrorException Configurations.from_kwargs!(d, OptionG; name="AAA")
+
+    @testset "from_field_kwargs" begin
+        # error for ambiguious keyword
+        @test_throws ErrorException Configurations.from_field_kwargs(OptionG;name="AAA")
+
+        @test Configurations.from_field_kwargs(OptionB;name="AAA") == OptionB(;
+            opt = OptionA(;
+                name = "AAA",
+            ),
+        )
+    end
 end
 
 @testset "inside constructor" begin
@@ -187,8 +198,21 @@ end
     )
 end
 
+@option struct LongValidateErrorHint
+    x1
+    x2
+    x3
+    x4
+    x5
+    x6
+    x7
+    x8
+    x9
+end
+
 @testset "validate keys" begin
     @test_throws ArgumentError Configurations.validate_keywords(OptionA; abc=2)
+    @test_throws ArgumentError Configurations.validate_keywords(LongValidateErrorHint; abc=2)
     @test Configurations.validate_keywords(OptionB; opt_name="AAA") === nothing
     @test_throws ArgumentError Configurations.validate_keywords(OptionB; opt_abc="AAA")
 end
