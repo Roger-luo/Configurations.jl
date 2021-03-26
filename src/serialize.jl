@@ -15,7 +15,8 @@ Convert an object to an `OrderedDict`.
 # Kwargs
 
 - `include_defaults`: include the default value.
-- `exclude_nothing`: exclude fields that have value `nothing`
+- `exclude_nothing`: exclude fields that have value `nothing`,
+    this supersedes `include_defaults` when they are both `true`.
 
 !!! tips
     `to_dict` does not export fields that are of the same values as the defaults. 
