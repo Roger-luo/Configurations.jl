@@ -7,11 +7,6 @@ using Expronicon
 using OrderedCollections
 
 using Crayons.Box
-using Expronicon.Types
-using Expronicon.Analysis
-using Expronicon.CodeGen
-using Expronicon.Transform
-using Expronicon.Printings
 
 export no_default,
     Maybe,
