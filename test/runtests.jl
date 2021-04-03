@@ -1,5 +1,5 @@
 using Configurations
-using Expronicon.Types
+using Expronicon
 using Configurations: to_dict, from_kwargs, from_dict, alias,
     from_toml, no_default, field_defaults, field_default, field_alias, field_aliases,
     show_option, PartialDefault
