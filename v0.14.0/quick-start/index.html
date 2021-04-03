@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Quick Start · Configurations.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">Configurations.jl</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>Quick Start</a></li><li><a class="tocitem" href="../advance/">Advanced Usage</a></li><li><a class="tocitem" href="../ref/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Quick Start</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Quick Start</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/Roger-luo/Configurations.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Quick-Start"><a class="docs-heading-anchor" href="#Quick-Start">Quick Start</a><a id="Quick-Start-1"></a><a class="docs-heading-anchor-permalink" href="#Quick-Start" title="Permalink"></a></h1><p>Create an option type with macro <code>@option</code> as following</p><pre><code class="language-julia">@option struct YouOptionType &lt;: YourAbstractType
+   a::Int = 1
+   b::Float64 # required field
+end</code></pre><p>then you can use this as an option type, it can let you:</p><ol><li>convert an option type defined in Julia to a markup language, such as TOML, JSON</li><li>read from plain <code>AbstractDict{String}</code>, TOML, JSON etc. and convert the data to the option type</li><li>compose several option types together</li></ol><p>You can easily create hierarchical struct types as following</p><pre><code class="language-julia">julia&gt; &quot;Option A&quot;
+       @option &quot;option_a&quot; struct OptionA
+           name::String
+           int::Int = 1
+       end
+
+julia&gt; &quot;Option B&quot;
+       @option &quot;option_b&quot; struct OptionB
+           opt::OptionA = OptionA(;name = &quot;Sam&quot;)
+           float::Float64 = 0.3
+       end</code></pre><p>and convert a dict to an option type via <a href="../ref/#Configurations.from_dict-Union{Tuple{T}, Tuple{Type{T}, AbstractDict{String, V} where V}} where T"><code>from_dict</code></a>.</p><pre><code class="language-julia">julia&gt; d = Dict{String, Any}(
+           &quot;opt&quot; =&gt; Dict{String, Any}(
+               &quot;name&quot; =&gt; &quot;Roger&quot;,
+               &quot;int&quot; =&gt; 2,
+           ),
+           &quot;float&quot; =&gt; 0.33
+       );
+
+julia&gt; option = from_dict(OptionB, d)
+OptionB(;
+    opt = OptionA(;
+        name = &quot;Roger&quot;,
+        int = 2,
+    ),
+    float = 0.33,
+)</code></pre><p>when there are multiple possible option type for one field, one can use the alias to distinguish them</p><pre><code class="language-julia">julia&gt; @option struct OptionD
+           opt::Union{OptionA, OptionB}
+       end
+
+julia&gt; d1 = Dict{String, Any}(
+               &quot;opt&quot; =&gt; Dict{String, Any}(
+                   &quot;option_b&quot; =&gt; d
+               )
+           );
+
+julia&gt; from_dict(OptionD, d1)
+OptionD(;
+    opt = OptionB(;
+        opt = OptionA(;
+            name = &quot;Roger&quot;,
+            int = 2,
+        ),
+        float = 0.33,
+    ),
+)
+
+julia&gt; using Configurations
+
+julia&gt; @option struct OptionA
+           name::String
+           int::Int = 1
+       end
+
+julia&gt; @option struct OptionB
+           opt::OptionA = OptionA(;name = &quot;Sam&quot;)
+           float::Float64 = 0.3
+       end
+
+julia&gt; d = Dict(
+           &quot;opt&quot; =&gt; Dict(
+               &quot;name&quot; =&gt; &quot;Roger&quot;,
+               &quot;int&quot; =&gt; 2,
+           ),
+           &quot;float&quot; =&gt; 0.33
+       )
+Dict{String, Any} with 2 entries:
+  &quot;opt&quot;   =&gt; Dict{String, Any}(&quot;int&quot;=&gt;2, &quot;name&quot;=&gt;&quot;Roger&quot;)
+  &quot;float&quot; =&gt; 0.33
+
+julia&gt; option = from_dict(OptionB, d)
+OptionB(;
+  opt = OptionA(;
+    name = &quot;Roger&quot;,
+    int = 2,
+  ),
+  float = 0.33,
+)</code></pre><p>Or you can also create it from keyword arguments, e.g</p><pre><code class="language-julia">julia&gt; from_kwargs(OptionB; opt_name=&quot;Roger&quot;, opt_int=2, float=0.33)
+OptionB(;
+    opt = OptionA(;
+        name = &quot;Roger&quot;,
+        int = 2,
+    ),
+    float = 0.33,
+)</code></pre><p>for option types you can always convert <code>AbstractDict</code> to a given option type, or convert them back to dictionary via <code>to_dict</code>, e.g</p><pre><code class="language-julia">julia&gt; Configurations.to_dict(option)
+OrderedDict{String, Any} with 2 entries:
+  &quot;opt&quot;   =&gt; OrderedDict{String, Any}(&quot;name&quot;=&gt;&quot;Roger&quot;, &quot;int&quot;=&gt;2)
+  &quot;float&quot; =&gt; 0.33</code></pre><p>for serialization, you can use the builtin TOML support</p><pre><code class="language-julia">julia&gt; to_toml(option)
+&quot;float = 0.33\n\n[opt]\nname = \&quot;Roger\&quot;\nint = 2\n&quot;</code></pre><p>Or serialize it to other format from <code>OrderedDict</code>.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../advance/">Advanced Usage »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Saturday 3 April 2021 03:56">Saturday 3 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
