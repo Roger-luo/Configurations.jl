@@ -322,7 +322,7 @@ end
     @test field_default(NotInferrable2{Int}, :a) == 2
     @test field_default(NotInferrable2{Float64}, :a) == 1.0
     @test NotInferrable2{Int}(;b = 2) == NotInferrable2{Int}(2.0, 2)
-    @test_throws MethodError NotInferrable2{Float64}(;b = 2)
+    @test NotInferrable2{Float64}(;b = 2) == NotInferrable2{Float64}(;b = 2.0)
 end
 
 @option struct Empty end
