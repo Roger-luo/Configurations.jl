@@ -25,6 +25,8 @@ pkg> add Configurations
 
 ## Usage
 
+*There are more detailed guide in the [documentation](docs-dev-url).*
+
 This package provides a macro `@option` to let you define `struct`s to represent options/configurations, and serialize between
 different option/configuration file formats such as `TOML`.
 
