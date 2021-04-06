@@ -165,7 +165,7 @@ function codegen_field_default(def::JLKwStruct)
 
     return codegen_ast(
         JLFunction(;
-            name=GlobalRef(Configurations, :field_default),
+            name=:($Configurations.field_default),
             args=[:(::Type{$type}), :($obj::Symbol)],
             body=codegen_ast(ret),
             whereparams=[typevars..., :($type <: $ub)],
@@ -198,7 +198,7 @@ function codegen_type_alias(def::JLKwStruct)
 end
 
 function codegen_create(def::JLKwStruct)
-    codegen_ast_kwfn(def, GlobalRef(Configurations, :create))
+    codegen_ast_kwfn(def, :($Configurations.create))
 end
 
 function codegen_show(def::JLKwStruct)
