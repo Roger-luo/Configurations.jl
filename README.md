@@ -67,64 +67,6 @@ OptionB(;
 )
 ```
 
-When there are multiple possible option types for one field,
-one can use the alias to distinguish them
-
-```julia
-julia> @option struct OptionD
-           opt::Union{OptionA, OptionB}
-       end
-
-julia> d1 = Dict{String, Any}(
-               "opt" => Dict{String, Any}(
-                   "option_b" => d
-               )
-           );
-
-julia> from_dict(OptionD, d1)
-OptionD(;
-    opt = OptionB(;
-        opt = OptionA(;
-            name = "Roger",
-            int = 2,
-        ),
-        float = 0.33,
-    ),
-)
-```
-
-Or you can create it from keyword arguments, e.g
-
-```julia
-julia> from_kwargs(OptionB; opt_name="Roger", opt_int=2, float=0.33)
-OptionB(;
-    opt = OptionA(;
-        name = "Roger",
-        int = 2,
-    ),
-    float = 0.33,
-)
-```
-
-For option types you can always convert an `AbstractDict` to a given option type,
-or convert them back to dictionary via `to_dict`, e.g
-
-```julia
-julia> Configurations.to_dict(option)
-OrderedDict{String, Any} with 2 entries:
-  "opt"   => OrderedDict{String, Any}("name"=>"Roger", "int"=>2)
-  "float" => 0.33
-```
-
-For serialization, you can use the builtin TOML support
-
-```julia
-julia> to_toml(option)
-"float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
-```
-
-or serialize it to other formats from `OrderedDict`.
-
 ## License
 
 MIT License
