@@ -1,8 +1,14 @@
 using Documenter, Configurations
 
+Themes.compile(joinpath(@__DIR__, "src/assets/main.scss"))
+
 makedocs(;
     modules = [Configurations],
-    format = Documenter.HTML(prettyurls = !("local" in ARGS)),
+    format = Documenter.HTML(
+        prettyurls = !("local" in ARGS),
+        canonical="https://Roger-luo.github.io/Configurations.jl",
+        assets=String["assets/main.css"],
+    ),
     pages = [
         "Home" => "index.md",
         "Quick Start" => "quick-start.md",
