@@ -1,5 +1,6 @@
-using Documenter, Configurations
-
+using Documenter
+using Configurations
+using DocumenterTools: Themes
 Themes.compile(joinpath(@__DIR__, "src/assets/main.scss"))
 
 makedocs(;
