@@ -1,7 +1,7 @@
 name = "Configurations"
 uuid = "5218b696-f38b-4ac9-8b61-a12ec717816d"
 authors = ["Roger-luo <rogerluo.rl18@gmail.com> and contributors"]
-version = "0.14.4"
+version = "0.14.5"
 
 [deps]
 ANSIColoredPrinters = "a4c015fc-c6ff-483c-b24f-f7ea428134e9"
