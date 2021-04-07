@@ -80,6 +80,10 @@ end
 
 function option_m(ex, type_alias=nothing)
     def = JLKwStruct(ex, type_alias)
+    return codegen_option_type(def)
+end
+
+function codegen_option_type(def::JLKwStruct)
     quote
         $(codegen_ast(def))
         Core.@__doc__ $(def.name)
