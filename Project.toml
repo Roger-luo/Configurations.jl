@@ -11,6 +11,7 @@ OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
+ANSIColoredPrinters = "0.0.1"
 Crayons = "4.0"
 Expronicon = "0.4, 0.5"
 OrderedCollections = "1.3"
