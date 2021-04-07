@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Roger-luo/Configurations.jl/workflows/CI/badge.svg)](https://github.com/Roger-luo/Configurations.jl/actions)
 [![codecov](https://codecov.io/gh/Roger-luo/Configurations.jl/branch/master/graph/badge.svg?token=U604BQGRV1)](https://codecov.io/gh/Roger-luo/Configurations.jl)
-[![](docs-stable-img)][docs-stable-url]
+[![][docs-stable-img]][docs-stable-url]
 [![][docs-dev-img]][docs-dev-url]
 
 Configurations & Options made easy.
