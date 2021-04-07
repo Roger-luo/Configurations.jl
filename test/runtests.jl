@@ -433,3 +433,11 @@ show(stdout, MIME"text/plain"(),
         dict=Dict{String, Any}("a"=>1, "b"=>"2")
     )
 )
+
+show(stdout, MIME"text/html"(),
+    Print2(;
+        list=[1,2,3,4,5],
+        nest=Print1(;list=[1, 2]),
+        dict=Dict{String, Any}("a"=>1, "b"=>"2")
+    )
+)
