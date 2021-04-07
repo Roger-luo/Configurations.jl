@@ -10,6 +10,17 @@ function show_option(io::IO, m::MIME"text/plain", x)
     indent_print(io, ")")
 end
 
+function show_option(io::IO, m::MIME"text/html", x)
+    buf = IOBuffer()
+    show(buf, MIME("text/plain"), x)
+    printer = HTMLPrinter(buf; root_class="configurations-option-type")
+    ascii_css = "https://cdn.jsdelivr.net/gh/JuliaDocs/ANSIColoredPrinters.jl@0.0.1/docs/src/assets/default.css"
+    write(io, """
+        <link rel="stylesheet" href="$ascii_css" />
+    """)
+    show(io, m, printer)
+end
+
 function show_option_fields(io::IO, m::MIME"text/plain", x)
     within_indent(io) do io
         for name in fieldnames(typeof(x))

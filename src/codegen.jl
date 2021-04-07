@@ -211,9 +211,9 @@ function codegen_show(def::JLKwStruct)
             $show_option(io, m, x)
         end
 
-        # function $Base.show(io::IO, m::MIME"text/html", x::$(def.name))
-        #     $show_option(io, m, x)
-        # end
+        function $Base.show(io::IO, m::MIME"text/html", x::$(def.name))
+            $show_option(io, m, x)
+        end
 
         function $Base.show(io::IO, ::MIME"application/toml", x::$(def.name))
             return print(io, to_toml(x))
