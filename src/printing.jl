@@ -11,14 +11,78 @@ function show_option(io::IO, m::MIME"text/plain", x)
 end
 
 function show_option(io::IO, m::MIME"text/html", x)
-    buf = IOBuffer()
-    show(buf, MIME("text/plain"), x)
-    printer = HTMLPrinter(buf; root_class="configurations-option-type")
-    ascii_css = "https://cdn.jsdelivr.net/gh/JuliaDocs/ANSIColoredPrinters.jl@0.0.1/docs/src/assets/default.css"
-    write(io, """
-        <link rel="stylesheet" href="$ascii_css" />
+    topmost = get(io, :configurations_style_sheet, true)
+    if topmost
+        print(io, """
+        <style>
+        @font-face {
+            font-family: JuliaMono;
+            src: local('JuliaMono'),
+            url("https://cdn.jsdelivr.net/gh/cormullion/juliamono/webfonts/JuliaMono-Regular.woff2");
+        }
+        .configurations-option-type {
+            font-family: "JuliaMono";
+            font-size: 1em;
+        }
+        .configurations-option-type ul{
+            list-style-type: none;
+        }
+
+        .configurations-list ul {
+            list-style: none;
+        }
+
+        .configurations-bullet {
+            color: hsl(0, 0%, 25%, 0.7);
+            padding: 20px;
+        }
+
+        .configurations-option-head {
+            color: #5e7ad3;
+            cursor: pointer;
+            user-select: none;
+        }
+        .configurations-option-head::before {
+            content: "\\25B6";
+            color: black;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .configurations-option-head-down::before {
+            transform: rotate(90deg);
+        }
+        .configurations-option-fields {
+            display: none;
+        }
+        .configurations-option-active {
+            display: block;
+        }
+        </style>
+        <script>
+        var toggler = document.getElementsByClassName("configurations-option-head");
+        var i;
+
+        for (i = 0; i < toggler.length; i++) {
+        toggler[i].addEventListener("click", function() {
+            this.parentElement.querySelector(".configurations-option-fields").classList.toggle("configurations-option-active");
+            this.classList.toggle("configurations-option-head-down");
+        });
+        }
+        </script>
+        <dev class="configurations-option-type">
+        """)
+    end
+
+    print(io, """
+        <ul>
+        <li><span class="configurations-option-head">$(summary(x))</span>
     """)
-    show(io, m, printer)
+    show_option_fields(IOContext(io, :configurations_style_sheet=>false), m, x)
+    print(io, """
+            </li>
+        </ul>
+    """)
+    topmost && print(io, "</dev>")
 end
 
 function show_option_fields(io::IO, m::MIME"text/plain", x)
@@ -34,6 +98,20 @@ function show_option_fields(io::IO, m::MIME"text/plain", x)
     end
 end
 
+function show_option_fields(io::IO, m::MIME"text/html", x)
+    print(io, "<ul class=\"configurations-option-fields\">")
+    for name in fieldnames(typeof(x))
+        value = getfield(x, name)
+        if value != field_default(typeof(x), name)
+            print(io, "<li>")
+            print(io, "<span>", string(name), "=</span>")
+            show_option_value(io, m, value)
+            print(io, "</li>")
+        end
+    end
+    print(io, "</ul>")
+end
+
 function show_option_value(io::IO, m::MIME, x)
     if is_option(x)
         show_option(io, m, x)
@@ -41,9 +119,22 @@ function show_option_value(io::IO, m::MIME, x)
         show(io, x)
     end
 end
-show_option_value(io::IO, ::MIME, x::AbstractDict) = show(io, x)
 
-function show_option_value(io::IO, m::MIME, x::AbstractDict{String})
+function show_option_value(io::IO, m::MIME"text/html", x::AbstractDict)
+    print(io, "<span>", typeof(x), "(</span>")
+
+    print(io, "<ul>")
+    for (k, v) in x
+        print(io, "<li>")
+        print(io, "<span>&nbsp&nbsp", repr(k), "=>")
+        print(io, "</span>")
+        show_option_value(io, m, v)
+        print(io, "</li>")
+    end
+    print(io, ")</ul>")
+end
+
+function show_option_value(io::IO, m::MIME, x::AbstractDict)
     if !get(io, :no_indent_first_line, false)
         indent_print(io)
     end
@@ -78,4 +169,20 @@ function show_option_value(io::IO, m::MIME, list::Vector)
         end
     end
     indent_print(io, "]")
+end
+
+function show_option_value(io::IO, m::MIME"text/html", list::Vector)
+    if !(any(is_option, list) || length(list) > 4)
+        return print(io, string(list))
+    end
+
+    print(io, "<span>[</span>")
+    print(io, "<ul class=\"configurations-list\">")
+    for (i, each) in enumerate(list)
+        print(io, "<li>")
+        print(io, "<span class=\"configurations-bullet\">", i, ".", "</span>")
+        show_option_value(io, m, each)
+        print(io, "</li>")
+    end
+    print(io, "<span>]</span></ul>")
 end
