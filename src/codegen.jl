@@ -83,6 +83,12 @@ function option_m(ex, type_alias=nothing)
     return codegen_option_type(def)
 end
 
+"""
+    codegen_option_type(def::JLKwStruct)
+
+Generate the `Configurations` option type definition from
+a given `JLKwStruct` created by [`Expronicon`](https://github.com/Roger-luo/Expronicon.jl).
+"""
 function codegen_option_type(def::JLKwStruct)
     quote
         $(codegen_ast(def))
