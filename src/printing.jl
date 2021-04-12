@@ -1,3 +1,34 @@
+tab(n::Int) = " "^n
+no_indent(io::IO) = IOContext(io, :indent=>0)
+no_indent_first_line(io::IO) = IOContext(io, :no_indent_first_line=>true)
+
+# 1.0 compatibility
+function indent_print(io::IO, ::Nothing)
+    indent = get(io, :indent, 0)
+    print(io, tab(indent), "nothing")
+end
+
+function indent_print(io::IO, xs...)
+    indent = get(io, :indent, 0)
+    Base.print(io, tab(indent), xs...)
+end
+
+function indent_println(io::IO, xs...)
+    if get(io, :no_indent_first_line, false)
+        indent_print(no_indent(io), xs..., "\n")
+    else
+        indent_print(io, xs..., "\n")
+    end
+end
+
+function within_indent(f, io)
+    f(indent(io))
+end
+
+function indent(io)
+    IOContext(io, :indent => get(io, :indent, 0) + 4)
+end
+
 function show_option(io::IO, m::MIME"text/plain", x)
     if !get(io, :no_indent_first_line, false)
         indent_print(io)
