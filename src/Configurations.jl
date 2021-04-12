@@ -3,7 +3,7 @@ module Configurations
 export @option, from_dict, from_kwargs, from_toml, to_dict, to_toml
 
 using TOML
-using ExproniconLite
+using Expronicon
 using OrderedCollections
 
 using Crayons.Box
