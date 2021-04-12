@@ -26,7 +26,7 @@ pkg> add Configurations
 
 ## Usage
 
-*There are more detailed guide in the [documentation](docs-stable-url).*
+*There are more detailed guide in the [documentation][docs-stable-url].*
 
 This package provides a macro `@option` to let you define `struct`s to represent options/configurations, and serialize between
 different option/configuration file formats such as `TOML`.
@@ -75,6 +75,6 @@ OptionB(;
 MIT License
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
-[docs-dev-url]: https://rogerluo.me/Configurations.jl/dev/
+[docs-dev-url]: https://Roger-luo.github.io/Configurations.jl/dev/
 [docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
 [docs-stable-url]: https://Roger-luo.github.io/Configurations.jl/stable
