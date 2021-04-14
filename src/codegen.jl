@@ -153,14 +153,14 @@ function codegen_field_default(def::JLKwStruct)
         cond = :($obj == $(QuoteNode(field.name)))
 
         if isempty(vars) # const default
-            ret.map[cond] = field.default
+            ret[cond] = field.default
         else
             jlfn = JLFunction(;
                 args=vars,
                 body=field.default,
             )
             fn = gensym(:fn)
-            ret.map[cond] = quote
+            ret[cond] = quote
                 $fn = $(codegen_ast(jlfn))
                 $PartialDefault($fn, $vars, $(Expr(:quote, field.default)))
             end
