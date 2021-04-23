@@ -71,14 +71,15 @@ OptionD(;
 ```
 """
 macro option(ex)
-    esc(option_m(ex))
+    esc(option_m(__module__, ex))
 end
 
 macro option(alias::String, ex)
-    esc(option_m(ex, alias))
+    esc(option_m(__module__, ex, alias))
 end
 
-function option_m(ex, type_alias=nothing)
+function option_m(mod::Module, ex, type_alias=nothing)
+    ex = macroexpand(mod, ex)
     def = JLKwStruct(ex, type_alias)
     return codegen_option_type(def)
 end
