@@ -413,7 +413,7 @@ end
 end
 
 @testset "macroexpand (#39)" begin
-    @test fieldnames(MacroExpand) == [:x, :y]
+    @test fieldnames(MacroExpand) == (:x, :y)
 end
 
 @option struct DefaultFunction
