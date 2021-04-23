@@ -405,6 +405,17 @@ end
     @test from_dict(UnionToDict, d) == x
 end
 
+@option struct MacroExpand
+    x=1
+    @static if true
+        y=2
+    end
+end
+
+@testset "macroexpand (#39)" begin
+    @test fieldnames(MacroExpand) == (:x, :y)
+end
+
 @option struct DefaultFunction
     a::Float64
     b::Float64 = sin(a)
