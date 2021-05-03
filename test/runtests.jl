@@ -1,5 +1,5 @@
 using Configurations
-using Expronicon
+using ExproniconLite
 using Configurations: to_dict, from_kwargs, from_dict, alias,
     from_toml, no_default, field_defaults, field_default, field_alias, field_aliases,
     show_option, PartialDefault
@@ -414,6 +414,55 @@ end
 
 @testset "macroexpand (#39)" begin
     @test fieldnames(MacroExpand) == (:x, :y)
+end
+
+@option "A" struct UnionConvertA
+    a::Int
+end
+
+@option "B" struct UnionConvertB
+    b::String
+end
+
+@option struct UnionConvertError
+    b::String
+end
+
+@option mutable struct UnionNothing
+    info::Maybe{UnionConvertA} = nothing
+end
+
+@option mutable struct UnionConvertAB
+    info::Maybe{Union{UnionConvertA, UnionConvertB}} = nothing
+end
+
+@option mutable struct UnionConvertABError
+    info::Maybe{Union{UnionConvertA, UnionConvertB, UnionConvertError}} = nothing
+end
+
+@testset "Dict convertion for Union{Nothing, OptionType}" begin
+    @test to_dict(UnionNothing()) == OrderedDict{String, Any}()
+    @test to_dict(UnionNothing(UnionConvertA(1))) == OrderedDict{String, Any}(
+        "info" => OrderedDict{String, Any}(
+            "a" => 1,
+        )
+    )
+    @test to_dict(UnionConvertAB(UnionConvertA(1))) == OrderedDict{String, Any}(
+        "info" => OrderedDict{String, Any}(
+            "A" => OrderedDict{String, Any}(
+                "a" => 1,
+            )
+        )
+    )
+    @test to_dict(UnionConvertAB(UnionConvertB("a.b.c"))) == OrderedDict{String, Any}(
+        "info" => OrderedDict{String, Any}(
+            "B" => OrderedDict{String, Any}(
+                "b" => "a.b.c",
+            )
+        )
+    )
+
+    @test_throws ErrorException to_dict(UnionConvertABError(UnionConvertError("a.b.c")))
 end
 
 @option struct DefaultFunction

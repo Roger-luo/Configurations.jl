@@ -98,7 +98,11 @@ function _option_to_dict(x, option::ConvertOption)
 
             # always add an alias if it's a Union
             # of multiple option types
-            if is_option(value) && type isa Union
+            if is_option(value) && is_union_of_multiple_options(type)
+                if type_alias(typeof(value)) === nothing
+                    error("please define an alias for option type $(typeof(value))")
+                end
+
                 d[string(name)] = OrderedDict{String, Any}(
                     type_alias(typeof(value)) => field_dict,
                 )
@@ -108,6 +112,21 @@ function _option_to_dict(x, option::ConvertOption)
         end
     end
     return d
+end
+
+function is_union_of_multiple_options(::Type{T}) where T
+    T isa Union || return false
+    T.a === Nothing && return is_union_of_multiple_options(T.b)
+    T.b === Nothing && return is_union_of_multiple_options(T.a)
+    
+    # not option type
+    return is_option_maybe(T.a) && is_option_maybe(T.b)
+end
+
+function is_option_maybe(::Type{T}) where T
+    is_option(T) && return true
+    T isa Union || return false
+    return is_option_maybe(T.a) || is_option_maybe(T.b)
 end
 
 """
