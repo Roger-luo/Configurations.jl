@@ -26,7 +26,7 @@ OptionA(;
 """
 function from_dict(::Type{T}, d::AbstractDict{String}; kw...) where T
     # override dict values
-    from_underscore_kwargs!(deepcopy(d), T; kw...)
+    d = from_underscore_kwargs!(deepcopy(d), T; kw...)
     return from_dict_validate(T, d)
 end
 

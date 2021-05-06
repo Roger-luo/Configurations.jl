@@ -230,7 +230,7 @@ end
 
     @test from_dict(OptionB, d; opt_name = "AAA") == OptionB(;
         opt = OptionA(;
-            name = "Roger",
+            name = "AAA",
             int = 2,
         ),
         float = 0.33,
