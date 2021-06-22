@@ -100,8 +100,6 @@ function codegen_option_type(def::JLKwStruct)
         $(codegen_field_default(def))
         $(codegen_type_alias(def))
         $(codegen_isequal(def))
-        # pretty printings
-        $(codegen_show(def))
         nothing
     end
 end
@@ -210,20 +208,4 @@ end
 
 function codegen_create(def::JLKwStruct)
     codegen_ast_kwfn(def, :($Configurations.create))
-end
-
-function codegen_show(def::JLKwStruct)
-    quote
-        function $Base.show(io::IO, m::MIME"text/plain", x::$(def.name))
-            $show_option(io, m, x)
-        end
-
-        function $Base.show(io::IO, m::MIME"text/html", x::$(def.name))
-            $show_option(io, m, x)
-        end
-
-        function $Base.show(io::IO, ::MIME"application/toml", x::$(def.name))
-            return print(io, to_toml(x))
-        end
-    end
 end
