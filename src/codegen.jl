@@ -5,6 +5,12 @@ Define an option struct type. This will auto-generate methods that parse a given
 object (the keys must be of type `String`) into an instance of the struct type you defined. One
 can use `alias` string to distinguish multiple possible option type for the same field.
 
+!!! compat "Configurations 0.16"
+    from v0.16.0 Configurations stops overloading the `Base.show` method for you,
+    if you need pretty printing of your option types, consider overloading
+    the `Base.show(io::IO, mime::MIME, x)` method to `pprint(io, mime, x)` provided by
+    [GarishPrint](https://github.com/Roger-luo/GarishPrint.jl)
+
 # Example
 
 One can define option type via `@option` macro with or without an alias.
@@ -100,8 +106,6 @@ function codegen_option_type(def::JLKwStruct)
         $(codegen_field_default(def))
         $(codegen_type_alias(def))
         $(codegen_isequal(def))
-        # pretty printings
-        $(codegen_show(def))
         nothing
     end
 end
@@ -210,20 +214,4 @@ end
 
 function codegen_create(def::JLKwStruct)
     codegen_ast_kwfn(def, :($Configurations.create))
-end
-
-function codegen_show(def::JLKwStruct)
-    quote
-        function $Base.show(io::IO, m::MIME"text/plain", x::$(def.name))
-            $show_option(io, m, x)
-        end
-
-        function $Base.show(io::IO, m::MIME"text/html", x::$(def.name))
-            $show_option(io, m, x)
-        end
-
-        function $Base.show(io::IO, ::MIME"application/toml", x::$(def.name))
-            return print(io, to_toml(x))
-        end
-    end
 end

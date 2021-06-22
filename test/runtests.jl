@@ -2,7 +2,7 @@ using Configurations
 using ExproniconLite
 using Configurations: to_dict, from_kwargs, from_dict, alias,
     from_toml, no_default, field_defaults, field_default, field_alias, field_aliases,
-    show_option, PartialDefault
+    PartialDefault
 using OrderedCollections
 using Test
 
@@ -474,30 +474,3 @@ end
     x = DefaultFunction(;a=1.0, b=2.0)
     @test field_default(DefaultFunction, :b)(1.0) == sin(1.0)
 end
-
-@option struct Print1
-    list::Vector{Int} = [1, 2, 3]
-    dict::Dict{String, Any} = Dict{String, Any}("a"=>1, "b"=>"2")
-end
-
-@option struct Print2
-    list::Vector{Int} = [1, 2, 3]
-    dict::Dict{String, Any}
-    nest::Print1 = Print1()
-end
-
-show(stdout, MIME"text/plain"(),
-    Print2(;
-        list=[1,2,3,4,5],
-        nest=Print1(;list=[1, 2]),
-        dict=Dict{String, Any}("a"=>1, "b"=>"2")
-    )
-)
-
-show(stdout, MIME"text/html"(),
-    Print2(;
-        list=[1,2,3,4,5],
-        nest=Print1(;list=[1, 2]),
-        dict=Dict{String, Any}("a"=>1, "b"=>"2")
-    )
-)
