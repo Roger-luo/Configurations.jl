@@ -1,14 +1,16 @@
 using Documenter
 using Configurations
-using DocumenterTools: Themes
-Themes.compile(joinpath(@__DIR__, "src/assets/main.scss"))
+using DocThemeIndigo
+
+indigo = DocThemeIndigo.install(Configurations)
+
 
 makedocs(;
     modules = [Configurations],
     format = Documenter.HTML(
         prettyurls = !("local" in ARGS),
         canonical="https://Roger-luo.github.io/Configurations.jl",
-        assets=String["assets/main.css"],
+        assets=String[indigo],
     ),
     pages = [
         "Home" => "index.md",
