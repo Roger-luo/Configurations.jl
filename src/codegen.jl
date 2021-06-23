@@ -8,7 +8,7 @@ can use `alias` string to distinguish multiple possible option type for the same
 !!! compat "Configurations 0.16"
     from v0.16.0 Configurations stops overloading the `Base.show` method for you,
     if you need pretty printing of your option types, consider overloading
-    the `Base.show(io::IO, mime::MIME, x)` method to `pprint(io, mime, x)` provided by
+    the `Base.show(io::IO, mime::MIME, x)` method to `pprint_struct(io, mime, x)` provided by
     [GarishPrint](https://github.com/Roger-luo/GarishPrint.jl)
 
 # Example
