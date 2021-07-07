@@ -200,6 +200,34 @@ end
     )
 end
 
+@option struct VectorOfOptions
+    options::Vector{OptionA}
+end
+
+@testset "vector of options" begin
+    d = Dict{String, Any}(
+        "options" => [
+            Dict{String, Any}(
+                "name"=>"a",
+                "int" => 1,
+            ),
+            Dict{String, Any}(
+                "name"=>"b",
+                "int" => 2,
+            ),
+            Dict{String, Any}(
+                "name"=>"c",
+                "int" => 3,
+            ),
+        ]
+    )
+
+    option = from_dict(VectorOfOptions, d)
+    @test option.options[1] == OptionA("a", 1)
+    @test option.options[2] == OptionA("b", 2)
+    @test option.options[3] == OptionA("c", 3)
+end
+
 @option struct LongValidateErrorHint
     x1
     x2
@@ -248,6 +276,10 @@ end
     julia::Julia = Julia()
 end
 
+@option struct BuiltinVersionConvert
+    version::VersionNumber
+end
+
 @testset "non-dict value conversion" begin
     d = Dict{String, Any}(
         "julia" => Dict{String, Any}(
@@ -276,6 +308,8 @@ end
             versions = Dict(v"1.5.3" => "some/path/to/1.5.3"),
         ),
     )
+
+    @test from_kwargs(BuiltinVersionConvert; version="1.2.1").version == v"1.2.1"
 end
 
 @testset "to_dict nothing conversion" begin
