@@ -6,14 +6,11 @@ using TOML
 using ExproniconLite
 using OrderedCollections
 
-using Crayons.Box
-
 export no_default,
     Maybe,
     # reflection
-    field_aliases,
     field_default,
-    field_alias,
+    # field_alias,
     type_alias,
     # traits
     is_option,
@@ -23,7 +20,9 @@ export no_default,
     from_toml,
     from_toml_if_exists,
     # serialize
-    to_dict
+    to_dict,
+    DuplicatedFieldError,
+    InvalidKeyError
 
 include("types.jl")
 include("convert.jl")

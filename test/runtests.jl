@@ -1,8 +1,8 @@
 using Configurations
 using ExproniconLite
 using Configurations: to_dict, from_kwargs, from_dict, alias,
-    from_toml, no_default, field_defaults, field_default, field_alias, field_aliases,
-    PartialDefault
+    from_toml, no_default, field_defaults, field_default,
+    PartialDefault, field_keywords
 using OrderedCollections
 using Test
 
@@ -136,7 +136,7 @@ end
 
     @testset "from_field_kwargs" begin
         # error for ambiguious keyword
-        @test_throws ErrorException Configurations.from_field_kwargs(OptionG;name="AAA")
+        @test_throws DuplicatedFieldError Configurations.from_field_kwargs(OptionG;name="AAA")
 
         @test Configurations.from_field_kwargs(OptionB;name="AAA") == OptionB(;
             opt = OptionA(;
@@ -213,10 +213,10 @@ end
 end
 
 @testset "validate keys" begin
-    @test_throws ArgumentError Configurations.validate_keywords(OptionA; abc=2)
-    @test_throws ArgumentError Configurations.validate_keywords(LongValidateErrorHint; abc=2)
+    @test_throws InvalidKeyError Configurations.validate_keywords(OptionA; abc=2)
+    @test_throws InvalidKeyError Configurations.validate_keywords(LongValidateErrorHint; abc=2)
     @test Configurations.validate_keywords(OptionB; opt_name="AAA") === nothing
-    @test_throws ArgumentError Configurations.validate_keywords(OptionB; opt_abc="AAA")
+    @test_throws InvalidKeyError Configurations.validate_keywords(OptionB; opt_abc="AAA")
 end
 
 @testset "dict override" begin
@@ -372,7 +372,7 @@ end
 
 @testset "non-option type handling" begin
     @test_throws ErrorException field_default(Int, :a)
-    @test_throws ErrorException field_alias(Int, :a)
+    # @test_throws ErrorException field_alias(Int, :a)
     @test_throws ErrorException type_alias(Int)
 end
 
@@ -485,4 +485,40 @@ end
 
     Configurations.convert_to_option(::Type{CustomTypeConvert}, ::Type{Symbol}, s) = Symbol(s)
     @test from_dict(CustomTypeConvert, d) == CustomTypeConvert(1, :ccc)
+end
+
+@option struct DuplicatedFieldA
+    name::String
+end
+
+@option struct DuplicatedFieldB
+    name::String
+end
+
+@option struct DuplicatedFields
+    a::DuplicatedFieldA
+    b::DuplicatedFieldB
+end
+
+@testset "duplicated field check" begin
+    @test_throws Configurations.DuplicatedFieldError field_keywords(DuplicatedFields)
+end
+
+@test_throws ErrorException Configurations.create(Float64; name="abc")
+
+print(PartialDefault(x->x+1, [:x], :(x+1)))
+
+@testset "compare options" begin
+    @test Configurations.compare_options(1, 2.0) == false
+    @test Configurations.compare_options(1, 1) == true
+
+    @test Configurations.compare_options(
+        from_dict(OptionB, dict1),
+        from_dict(OptionB, dict1)
+    ) == true
+
+    @test Configurations.compare_options(
+        from_dict(OptionB, dict1),
+        from_dict(OptionB, dict3)
+    ) == false
 end

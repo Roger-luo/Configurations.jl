@@ -272,16 +272,38 @@ function from_kwargs_option_key!(f, d::AbstractDict, ::Type{T}, name::Symbol, ke
     return d
 end
 
-function validate_keywords(::Type{T}, keys = underscore_keywords(T); kw...) where T
-    if length(keys) > 8
-        hint = join(map(x->LIGHT_BLUE_FG(string(x)), keys[1:8]), ", ")
-        hint *= "... please check documentation for other valid keys"
-    else
-        hint = join(map(x->LIGHT_BLUE_FG(string(x)), keys), ", ")
-    end
+struct InvalidKeyError <: Exception
+    got::Symbol
+    keys::Vector{Symbol}
+end
 
+function Base.show(io::IO, err::InvalidKeyError)
+    print(io, "invalid key ")
+    printstyled(io, err.got; color=:light_blue)
+    print(io, ", possible keys are: ")
+
+    if length(err.keys) > 8
+        for idx in 1:8
+            printstyled(io, err.keys[idx]; color=:light_blue)
+            if idx != 8
+                print(io, ", ")
+            end
+        end
+        print(io, "... please check documentation for other valid keys")
+    else
+        for idx in eachindex(err.keys)
+            printstyled(io, err.keys[idx]; color=:light_blue)
+            if idx != lastindex(err.keys)
+                print(io, ", ")
+            end
+        end
+    end
+    return
+end
+
+function validate_keywords(::Type{T}, keys = underscore_keywords(T); kw...) where T
     for (k, v) in kw
-        k in keys || throw(ArgumentError("invalid key $(LIGHT_BLUE_FG(string(k))), possible keys are: $hint"))
+        k in keys || throw(InvalidKeyError(k, keys))
     end
     return
 end
@@ -292,7 +314,7 @@ end
 Return all the option type field names given `T`, error if there are duplicated sub-fields.
 """
 function field_keywords(::Type{T}) where T
-    return collect_field_keywords!(Symbol[], T)
+    return collect_field_keywords!(Symbol[], T, T)
 end
 
 """
@@ -322,20 +344,37 @@ function underscore(prefix::Maybe{Symbol}, name)
     end
 end
 
-function collect_field_keywords!(list::Vector{Symbol}, ::Type{T}) where T
+"""
+    DuplicatedFieldError(name, type)
+
+A field with `name` of given option `type` is duplicated in the subfields option type.
+Thus one cannot use the field keyword convention when seeing this error.
+"""
+struct DuplicatedFieldError <: Exception
+    name::Symbol
+    type
+end
+
+function Base.show(io::IO, err::DuplicatedFieldError)
+    print(io, "duplicated field ")
+    printstyled(io, err.name; color=:light_blue)
+    print(io, " in type ")
+    printstyled(io, err.type; color=:green)
+    print(io, " and its sub-fields")
+end
+
+function collect_field_keywords!(list::Vector{Symbol}, ::Type{Top}, ::Type{T}) where {Top, T}
     return foreach_keywords!(list, T) do name, type
-        msg = "duplicated field $(LIGHT_BLUE_FG(string(name))) " *
-            "in type $(GREEN_FG(string(T))) and its sub-fields"
         if is_option(type)
-            collect_field_keywords!(list, type)
+            collect_field_keywords!(list, Top, type)
         elseif type isa Union
             name in list && error(msg)
             push!(list, name)
             # recurse into Union
-            collect_field_keywords!(list, type.a)
-            collect_field_keywords!(list, type.b)
+            collect_field_keywords!(list, Top, type.a)
+            collect_field_keywords!(list, Top, type.b)
         else
-            name in list && error(msg)
+            name in list && throw(DuplicatedFieldError(name, Top))
             push!(list, name)
         end
     end

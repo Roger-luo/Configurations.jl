@@ -17,24 +17,14 @@ function field_defaults(::Type{T}) where T
     return Any[field_default(T, each) for each in fieldnames(T)]
 end
 
-"""
-    field_alias(::Type{T}) where T
+# """
+#     field_alias(::Type{T}, name::Symbol) where {T}
 
-Return all field name alias of given option types.
-"""
-function field_aliases(::Type{T}) where T
-    is_option(T) || error("$T is not an option type")
-    return Any[field_alias(T, each) for each in fieldnames(T)]
-end
-
-"""
-    field_alias(::Type{T}, name::Symbol) where {T}
-
-Return field name alias of given option types.
-"""
-function field_alias(::Type{T}, name::Symbol) where {T}
-    error("field_alias is not defined for $T, it may not be an option type")
-end
+# Return field name alias of given option types.
+# """
+# function field_alias(::Type{T}, name::Symbol) where {T}
+#     error("field_alias is not defined for $T, it may not be an option type")
+# end
 
 """
     type_alias(::Type{OptionType}) -> String

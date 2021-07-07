@@ -18,8 +18,9 @@ end
 compare_options(a, b) = false
 
 function compare_options(a::A, b::A) where {A}
-    for each in fieldnames(A)
-        getfield(a, each) == getfield(b, each) || return false
+    is_option(A) || return a == b # fall through to normal compare
+    for idx in 1:nfields(a)
+        compare_options(getfield(a, idx), getfield(b, idx)) || return false
     end
     return true
 end
