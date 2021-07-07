@@ -226,6 +226,14 @@ end
     @test option.options[1] == OptionA("a", 1)
     @test option.options[2] == OptionA("b", 2)
     @test option.options[3] == OptionA("c", 3)
+
+    @test to_dict(option) == OrderedDict{String, Any}(
+        "options" => OrderedDict{String, Any}[
+            OrderedDict("name" => "a"),
+            OrderedDict("name" => "b", "int" => 2),
+            OrderedDict("name" => "c", "int" => 3)
+        ]
+    )
 end
 
 @option struct LongValidateErrorHint
