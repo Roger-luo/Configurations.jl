@@ -66,12 +66,10 @@ which is the `JLKwStruct` struct.
 ### Builtin Code Generator
 
 ```@docs
-codegen_ast
 codegen_create
 codegen_is_option
 codegen_convert
 codegen_field_default
 codegen_type_alias
 codegen_isequal
-codegen_show
 ```

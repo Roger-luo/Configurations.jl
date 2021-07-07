@@ -139,6 +139,12 @@ function codegen_convert(def::JLKwStruct)
     end
 end
 
+"""
+    codegen_field_default(def::JLKwStruct)
+
+Generate [`field_default`](@ref) overload to support the default value
+reflection.
+"""
 function codegen_field_default(def::JLKwStruct)
     obj = gensym(:x)
     msg = Expr(:string, "type $(def.name) does not have field ", obj)
@@ -216,6 +222,11 @@ function codegen_type_alias(def::JLKwStruct)
     end
 end
 
+"""
+    codegen_create(def::JLKwStruct)
+
+Generate [`Configurations.create`](@ref) overload.
+"""
 function codegen_create(def::JLKwStruct)
     codegen_ast_kwfn(def, :($Configurations.create))
 end
