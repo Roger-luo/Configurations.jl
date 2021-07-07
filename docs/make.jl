@@ -1,12 +1,13 @@
 using Documenter
 using Configurations
 using DocThemeIndigo
+using YAML
+using GarishPrint
 
 indigo = DocThemeIndigo.install(Configurations)
 
-
 makedocs(;
-    modules = [Configurations],
+    modules = [Configurations, YAML, GarishPrint],
     format = Documenter.HTML(
         prettyurls = !("local" in ARGS),
         canonical="https://Roger-luo.github.io/Configurations.jl",
@@ -15,6 +16,7 @@ makedocs(;
     pages = [
         "Home" => "index.md",
         "Quick Start" => "quick-start.md",
+        "Type Conversion" => "convert.md",
         "Advanced Usage" => "advance.md",
         "References" => "ref.md",
     ],

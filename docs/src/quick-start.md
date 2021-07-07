@@ -1,5 +1,7 @@
 # Quick Start
 
+## Create an option type
+
 Create an option type with macro `@option` as following
 
 ```julia
@@ -141,3 +143,95 @@ julia> to_toml(option)
 ```
 
 Or serialize it to other format from `OrderedDict`.
+
+## Create pretty printing for your option type
+
+One can overload the `Base.show` method to create your own pretty printing. However, if you are fine with
+the printing style provided by [GarishPrint](https://rogerluo.dev/GarishPrint.jl/dev/), you can simply define
+the following
+
+```julia
+# using GarishPrint
+Base.show(io::IO, ::MIME"text/plain", x::MyOption) = GarishPrint.pprint_struct(io, x)
+```
+
+This will enable pretty printing provided by `GarishPrint` when a rich text environment is available,
+and it will fallback to the default julia printing if `"text/plain"` [MIME type](https://en.wikipedia.org/wiki/Media_type)
+is not available.
+
+## Read from TOML files
+
+Configurations supports TOML file by default via the TOML standard library, you can directly read a
+TOML file to your option types via [`from_toml`](@ref).
+
+```@docs
+from_toml
+```
+
+## Read from YAML files
+
+You can use the [JuliaData/YAML](https://github.com/JuliaData/YAML.jl) package to parse a YAML file to a `Dict{String, Any}`,
+
+```julia
+julia> using YAML, Configurations
+
+julia> @option struct MyOption
+           a::Int
+           b::Float64
+       end
+
+julia> data = YAML.load_file("test.yml"; dicttype=Dict{String, Any})
+Dict{String, Any} with 2 entries:
+  "b" => 2
+  "a" => 1
+
+julia> from_dict(MyOption, data)
+MyOption(1, 2.0)
+```
+
+but remember to tell the YAML parser that you would like the keys to be `String` since [`from_dict`](@ref) expects the dictionary to be `AbstractDict{String}`, this can be done via `dicttype` keyword as above example.
+
+## Read JSON files
+
+One can read JSON files as a dictionary via [JuliaIO/JSON](https://github.com/JuliaIO/JSON.jl).
+
+```julia
+julia> using JSON
+
+julia> d = JSON.parse("{\"a\":1,\"b\":2.1}")
+Dict{String, Any} with 2 entries:
+  "b" => 2.1
+  "a" => 1
+
+julia> from_dict(MyOption, d)
+MyOption(1, 2.1)
+```
+
+## Read other formats
+
+For other formats, as long as you can convert them to a subtype of `AbstractDict{String}`,
+you can always convert it to the option type you just defined via `from_dict`, however
+for the sake of simplicity Configurations will not ship such functionality with it.
+
+## Type Conversion
+
+Since markup languages usually do not support arbitrary Julia types, thus, one may find the `from_dict`
+complain that cannot `convert` an object of type `XXX` to an object of type `YYY`. Usually this is because
+you haven't overload `Base.convert` from `XXX` to `YYY` for the custom struct type, usually this can be
+resolved via the following overload
+
+```julia
+Base.convert(::Type{MyType}, x::String) = MyType(x)
+```
+
+where we assume you have written a constructor from `String` here.
+
+However, in some cases, you may want to do the conversion only for one `OptionType` without causing
+type piracy, for example, one may want to convert all the `String` to `Symbol` for `MyOption`, this
+can be done by overloading [`Configurations.convert_to_option`](@ref)
+
+```julia
+Configurations.convert_to_option(::Type{MyOption}, ::Type{Symbol}, s) = Symbol(s)
+```
+
+For more detailed type conversion mechanism, please read the [Type Conversion](@ref type-conversion) section.

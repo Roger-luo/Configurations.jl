@@ -199,11 +199,7 @@ function from_dict_inner(::Type{T}, @nospecialize(d)) where T
             push!(args, nothing)
         else
             v = convert_union_to_option(T, type, value)
-            if v === nothing
-                push!(args, convert(type, value))
-            else
-                push!(args, v)
-            end
+            push!(args, v)
         end
     end
 

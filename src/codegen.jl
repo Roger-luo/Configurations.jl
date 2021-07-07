@@ -11,6 +11,10 @@ can use `alias` string to distinguish multiple possible option type for the same
     the `Base.show(io::IO, mime::MIME, x)` method to `pprint_struct(io, mime, x)` provided by
     [GarishPrint](https://github.com/Roger-luo/GarishPrint.jl)
 
+!!! compat "Configurations 0.12"
+    from v0.12.0 the field alias feature is removed due to the syntax conflict with
+    field docstring. Please refer to [#17](https://github.com/Roger-luo/Configurations.jl/issues/17).
+
 # Example
 
 One can define option type via `@option` macro with or without an alias.

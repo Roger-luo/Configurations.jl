@@ -474,3 +474,15 @@ end
     x = DefaultFunction(;a=1.0, b=2.0)
     @test field_default(DefaultFunction, :b)(1.0) == sin(1.0)
 end
+
+@option struct CustomTypeConvert
+    a::Int
+    b::Symbol
+end
+
+@testset "custom/contextual type convert" begin
+    d = Dict{String, Any}("a"=>1, "b"=>"ccc")
+
+    Configurations.convert_to_option(::Type{CustomTypeConvert}, ::Type{Symbol}, s) = Symbol(s)
+    @test from_dict(CustomTypeConvert, d) == CustomTypeConvert(1, :ccc)
+end
