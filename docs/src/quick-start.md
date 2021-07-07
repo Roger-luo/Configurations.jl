@@ -159,6 +159,17 @@ This will enable pretty printing provided by `GarishPrint` when a rich text envi
 and it will fallback to the default julia printing if `"text/plain"` [MIME type](https://en.wikipedia.org/wiki/Media_type)
 is not available.
 
+## Read from Keyword Arguments
+
+Option types can be used to organize large number of keyword arguments, and one can also construct
+an option type from keyword arguments via [`from_kwargs`](@ref)
+
+```@docs
+Configurations.from_kwargs
+```
+
+A real world example is [the Pluto configuration](https://github.com/fonsp/Pluto.jl/blob/main/src/Configuration.jl#L159).
+
 ## Read from TOML files
 
 Configurations supports TOML file by default via the TOML standard library, you can directly read a
