@@ -22,6 +22,7 @@ export no_default,
     # serialize
     to_dict,
     DuplicatedFieldError,
+    DuplicatedAliasError,
     InvalidKeyError
 
 include("types.jl")

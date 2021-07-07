@@ -204,6 +204,10 @@ end
     options::Vector{OptionA}
 end
 
+@option struct VectorOfNumbers
+    list::Vector{Int}
+end
+
 @testset "vector of options" begin
     d = Dict{String, Any}(
         "options" => [
@@ -233,6 +237,10 @@ end
             OrderedDict("name" => "b", "int" => 2),
             OrderedDict("name" => "c", "int" => 3)
         ]
+    )
+
+    to_dict(VectorOfNumbers([1, 2, 3])) == OrderedDict{String, Any}(
+        "list" => [1, 2, 3]
     )
 end
 
@@ -581,9 +589,34 @@ end
     ) == false
 end
 
+@option "duplicated" struct DuplicatedAliasA
+    a::Int
+end
+
+@option "duplicated" struct DuplicatedAliasB
+    a::Int
+end
+
+@option struct DuplicatedAlias
+    option::Union{DuplicatedAliasA, DuplicatedAliasB}
+end
+
+@testset "duplicated alias check" begin
+    d = Dict{String, Any}(
+        "option" => Dict{String, Any}(
+            "duplicated" => Dict{String, Any}(
+                "a" => 1
+            )
+        )
+    )
+
+    @test_throws DuplicatedAliasError from_dict(DuplicatedAlias, d)
+end
+
 @testset "printing" begin
-    print(PartialDefault(x->x+1, [:x], :(x+1)))
-    print(InvalidKeyError(:name, [:a, :b, :c, :d]))
-    print(InvalidKeyError(:name, [Symbol(:a, idx) for idx in 1:10]))
-    print(DuplicatedFieldError(:name, OptionA))
+    println(PartialDefault(x->x+1, [:x], :(x+1)))
+    println(InvalidKeyError(:name, [:a, :b, :c, :d]))
+    println(InvalidKeyError(:name, [Symbol(:a, idx) for idx in 1:10]))
+    println(DuplicatedFieldError(:name, OptionA))
+    println(DuplicatedAliasError("alias"))
 end

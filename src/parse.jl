@@ -113,11 +113,32 @@ function from_dict_validate(::Type{T}, d::AbstractDict{String}) where T
     return from_dict_inner(T, d)
 end
 
-function assert_union_alias(::Type{T}, name=nothing) where T
+struct DuplicatedAliasError <: Exception
+    name::String
+end
+
+function Base.show(io::IO, err::DuplicatedAliasError)
+    print(io, "duplicated alias name: ")
+    printstyled(io, err.name; color=:cyan)
+end
+
+function assert_union_alias(::Type{T}) where T
     T isa Union || return
-    name === nothing && return
-    name == type_alias(T.a) && error("duplicated alias name: $name")
-    return assert_union_alias(T.b, type_alias(T.a))
+    collect_assert_type_alias!(String[], T)
+    return
+end
+
+function collect_assert_type_alias!(list::Vector{String}, ::Type{T}) where T
+    if T isa Union
+        collect_assert_type_alias!(list, T.a)
+        collect_assert_type_alias!(list, T.b)
+    else
+        is_option(T) || return list
+        alias = type_alias(T)
+        alias in list && throw(DuplicatedAliasError(alias))
+        alias === nothing || push!(list, alias)
+    end
+    return list
 end
 
 # we don't process other kind of value
