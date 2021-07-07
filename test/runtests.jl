@@ -506,8 +506,6 @@ end
 
 @test_throws ErrorException Configurations.create(Float64; name="abc")
 
-print(PartialDefault(x->x+1, [:x], :(x+1)))
-
 @testset "compare options" begin
     @test Configurations.compare_options(1, 2.0) == false
     @test Configurations.compare_options(1, 1) == true
@@ -521,4 +519,29 @@ print(PartialDefault(x->x+1, [:x], :(x+1)))
         from_dict(OptionB, dict1),
         from_dict(OptionB, dict3)
     ) == false
+
+    @test Configurations.compare_options(
+        from_dict(OptionB, dict1),
+        from_dict(OptionB, dict1),
+        from_dict(OptionB, dict1),
+    ) == true
+
+    @test Configurations.compare_options(
+        from_dict(OptionB, dict1),
+        from_dict(OptionB, dict3),
+        from_dict(OptionB, dict1),
+    ) == false
+
+    @test Configurations.compare_options(
+        from_dict(OptionB, dict1),
+        from_dict(OptionB, dict1),
+        from_dict(OptionB, dict3),
+    ) == false
+end
+
+@testset "printing" begin
+    print(PartialDefault(x->x+1, [:x], :(x+1)))
+    print(InvalidKeyError(:name, [:a, :b, :c, :d]))
+    print(InvalidKeyError(:name, [Symbol(:a, idx) for idx in 1:10]))
+    print(DuplicatedFieldError(:name, OptionA))
 end
