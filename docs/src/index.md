@@ -39,6 +39,22 @@ When you have a lot settings/preferences/keyword arguments for a package or a fu
 to validate a JSON schema, a REST API for your web server. A similar package in Python is
 [pydantic](https://pydantic-docs.helpmanual.io/) in Python, but this package only provides the basic feature, a pydantic compatible package will be developed in the future in [KungIChi](https://github.com/Roger-luo/KungIChi.jl).
 
+A common type of code is instead of writing many keyword arguments, like `foo(;kw_a=1, kw_b=2, kw_c, ...)`,
+wrap them in an option type
+
+```julia
+@option struct FooOptions
+    kw_a::Int = 1
+    kw_b::Int = 2
+    # ...
+end
+
+foo(x, y;kw...) = foo(x, y, FooOptions(;kw...))
+foo(x, y, options::FooOptions) = #= actual implementation =#
+```
+
+this will make your keyword argument easy to read and serialize with readable markup language like TOML.
+
 - *Why Configurations only supports TOML?*
 This is not true, Configurations supports converting a dictionary type (subtype of `AbstractDict{String}`)
 to option types defined by [`@option`](@ref). The reason why TOML is supported by default is because
