@@ -1,7 +1,7 @@
 """
     from_dict(::Type{T}, d::AbstractDict{String}; kw...) where T
 
-Convert dictionary `d` to an option type `T`, the valud of valid fields of `T`
+Convert dictionary `d` to an option type `T`, the value of valid fields of `T`
 in this dictionary `d` can be override by keyword arguments.
 
 # Example
