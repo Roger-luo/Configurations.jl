@@ -189,7 +189,7 @@ function from_dict_inner(::Type{T}, @nospecialize(d)) where T
         key = string(each)
         type = fieldtype(T, each)
         default = field_default(T, each)
- 
+        
         if default === no_default
             if type isa Union
                 pick = pick_union(type, d[key])
@@ -277,9 +277,8 @@ function from_kwargs_option_key!(f, d::AbstractDict, ::Type{T}, name::Symbol, ke
     
     if is_option(T)
         field_d = OrderedDict{String, Any}()
-        if haskey(d, name_str)
-            d[name_str] isa AbstractDict || error("option $key_str must be specified using an AbstractDict")
-            field_d = merge!(field_d, d[name_str])
+        if haskey(d, name_str) && (d_value = d[name_str]) isa AbstractDict
+            field_d = merge!(field_d, d_value)
         end
 
         f(field_d, T) # recurse into subfields

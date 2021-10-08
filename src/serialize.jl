@@ -2,19 +2,23 @@ function assert_option(x)
     is_option(x) || error("$(typeof(x)) is not an option type")
 end
 
-@option struct ConvertOption
-    include_defaults::Bool=false
+@option struct ToDictOption
+    include_defaults::Bool=true
     exclude_nothing::Bool=false
 end
 
-"""
-    to_dict(option; include_defaults=false, exclude_nothing=false) -> OrderedDict
+const TOMLStyle = ToDictOption(include_defaults=true, exclude_nothing=true)
+const YAMLStyle = ToDictOption(include_defaults=true, exclude_nothing=false)
+const JSONStyle = ToDictOption(include_defaults=true, exclude_nothing=false)
 
-Convert an object to an `OrderedDict`. 
+"""
+    to_dict(x; include_defaults=true, exclude_nothing=false) -> OrderedDict
+
+Convert an object `x` to an `OrderedDict`.
 
 # Kwargs
 
-- `include_defaults`: include the default value.
+- `include_defaults`: include the default value, default is `true`.
 - `exclude_nothing`: exclude fields that have value `nothing`,
     this supersedes `include_defaults` when they are both `true`.
 
@@ -24,9 +28,26 @@ Convert an object to an `OrderedDict`.
     `include_defaults`, however,  this can be overridden by changing `include_defaults`
     to `true`.
 """
-function to_dict(x; include_defaults::Bool=false, exclude_nothing::Bool=false)
+function to_dict(x; kw...)
+    to_dict(x, ToDictOption(;kw...))
+end
+
+"""
+    to_dict(x, option::ToDictOption) -> OrderedDict
+
+Convert an object `x` to an `OrderedDict` with `ToDictOption` specified.
+
+# Example
+
+```julia
+to_dict(x, TOMLStyle) # TOML compatible
+to_dict(x, YAMLStyle) # YAML compatible
+to_dict(x, JSONStyle) # JSON compatible
+```
+"""
+function to_dict(x, option::ToDictOption)
     assert_option(x)
-    return to_dict(typeof(x), x, ConvertOption(include_defaults, exclude_nothing))
+    return to_dict(typeof(x), x, option)
 end
 
 """
@@ -62,7 +83,7 @@ a `String` for all kinds of option types.
 Configurations.to_dict(::Type, x::VersionNumber) = string(x)
 ```
 """
-function to_dict(::Type{T}, x, option::ConvertOption) where T
+function to_dict(::Type{T}, x, option::ToDictOption) where T
     if is_option(x)
         return _option_to_dict(x, option)
     else
@@ -73,7 +94,7 @@ end
 to_dict(::Type, x) = x
 
 # handle list of options as builtin
-function to_dict(::Type{T}, x::Vector, option::ConvertOption) where T
+function to_dict(::Type{T}, x::Vector, option::ToDictOption) where T
     if is_option(eltype(x))
         return map(p->to_dict(T, p, option), x)
     else
@@ -81,7 +102,7 @@ function to_dict(::Type{T}, x::Vector, option::ConvertOption) where T
     end
 end
 
-function _option_to_dict(x, option::ConvertOption)
+function _option_to_dict(x, option::ToDictOption)
     assert_option(x)
 
     d = OrderedDict{String, Any}()
@@ -135,10 +156,31 @@ end
 Convert an instance `option` of option type to TOML and write it to `IO`. See [`to_dict`](@ref)
 for other valid keyword options. See also `TOML.print` in the stdlib for the explaination of
 `sorted`, `by` and `f`.
+
+# Exclude `nothing`
+
+In TOML specification, there is [no null type](https://github.com/toml-lang/toml/issues/802). One
+should exclude the field if it is not specified (of value `nothing` in Julia). In `to_toml` the option
+`exclude_nothing` is always `true`.
+
+In most cases, `nothing` is used with another type to denote optional or not specified field,
+thus one should always put a default
+value `nothing` to the option struct, e.g
+
+One should define
+
+```julia
+@option struct OptionX
+    a::Union{Nothing, Int} = nothing
+    b::Maybe{Int} = nothing
+end
+```
+
+Here `Maybe{T}` is a convenient alias of `Union{Nothing, T}`.
 """
 function to_toml(f, io::IO, x; sorted::Bool=false, by=identity, kw...)
     is_option(x) || error("argument is not an option type")
-    d = to_dict(x; kw...)
+    d = to_dict(x; exclude_nothing=true, kw...)
     return TOML.print(f, io, d; sorted=sorted, by=by)
 end
 

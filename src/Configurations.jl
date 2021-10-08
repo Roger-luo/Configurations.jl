@@ -23,7 +23,10 @@ export no_default,
     to_dict,
     DuplicatedFieldError,
     DuplicatedAliasError,
-    InvalidKeyError
+    InvalidKeyError,
+    TOMLStyle,
+    YAMLStyle,
+    JSONStyle
 
 include("types.jl")
 include("convert.jl")
