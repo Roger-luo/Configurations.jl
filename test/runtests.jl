@@ -5,6 +5,7 @@ using Configurations: to_dict, from_kwargs, from_dict, alias,
     PartialDefault, field_keywords
 using OrderedCollections
 using Test
+using TOML
 
 "Option A"
 @option "option_a" struct OptionA
@@ -94,18 +95,18 @@ end
 @testset "to_dict" begin
     @test_throws ErrorException to_dict("aaa")
     @test to_dict(option) == dict1
-    @test to_dict(from_dict(OptionB, dict2)) == dict2
+    @test to_dict(from_dict(OptionB, dict2); include_defaults=false) == dict2
     @test to_dict(from_dict(OptionB, dict3); include_defaults=true) == dict3
-    @test to_dict(from_dict(OptionB, dict3)) == dict4
+    @test to_dict(from_dict(OptionB, dict3); include_defaults=false) == dict4
     @test to_dict(OptionF(); include_defaults=true, exclude_nothing=true) == OrderedDict{String, Any}("int"=>1)
     @test to_dict(OptionF(); include_defaults=true, exclude_nothing=false) == OrderedDict{String, Any}("name"=>nothing, "int"=>1)
 end
 
 @testset "to_toml" begin
-    @test to_toml(option) == "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
-    to_toml("test.toml", option)
+    @test to_toml(option; include_defaults=false) == "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
+    to_toml("test.toml", option; include_defaults=false)
     @test read("test.toml", String) == "float = 0.33\n\n[opt]\nname = \"Roger\"\nint = 2\n"
-    @test to_toml(option3) == "[opt]\nname = \"Roger\"\nint = 2\n"
+    @test to_toml(option3; include_defaults=false) == "[opt]\nname = \"Roger\"\nint = 2\n"
     @test to_toml(option3; include_defaults=true) == "float = 0.3\n\n[opt]\nname = \"Roger\"\nint = 2\n"
 end
 
@@ -129,10 +130,6 @@ end
     d = Configurations.from_kwargs!(OrderedDict{String, Any}(), OptionG; name="AAA", opt_name="Roger")
     @test d["name"] == "AAA"
     @test d["opt"]["name"] == "Roger"
-
-    # error for wrong specification when we can't overwrite
-    d = OrderedDict{String, Any}("opt"=>"AAA")
-    @test_throws ErrorException Configurations.from_kwargs!(d, OptionG; name="AAA")
 
     @testset "from_field_kwargs" begin
         # error for ambiguious keyword
@@ -231,7 +228,7 @@ end
     @test option.options[2] == OptionA("b", 2)
     @test option.options[3] == OptionA("c", 3)
 
-    @test to_dict(option) == OrderedDict{String, Any}(
+    @test to_dict(option; include_defaults=false) == OrderedDict{String, Any}(
         "options" => OrderedDict{String, Any}[
             OrderedDict("name" => "a"),
             OrderedDict("name" => "b", "int" => 2),
@@ -239,7 +236,7 @@ end
         ]
     )
 
-    to_dict(VectorOfNumbers([1, 2, 3])) == OrderedDict{String, Any}(
+    to_dict(VectorOfNumbers([1, 2, 3]); include_defaults=false) == OrderedDict{String, Any}(
         "list" => [1, 2, 3]
     )
 end
@@ -329,7 +326,7 @@ end
 end
 
 @testset "to_dict nothing conversion" begin
-    d = to_dict(Julia())
+    d = to_dict(Julia(); include_defaults=false)
     @test !haskey(d, "versions")
     @test !haskey(d, "active")
 end
@@ -491,7 +488,7 @@ end
 end
 
 @testset "Dict convertion for Union{Nothing, OptionType}" begin
-    @test to_dict(UnionNothing()) == OrderedDict{String, Any}()
+    @test to_dict(UnionNothing(); include_defaults=false) == OrderedDict{String, Any}()
     @test to_dict(UnionNothing(UnionConvertA(1))) == OrderedDict{String, Any}(
         "info" => OrderedDict{String, Any}(
             "a" => 1,
@@ -619,4 +616,31 @@ end
     println(InvalidKeyError(:name, [Symbol(:a, idx) for idx in 1:10]))
     println(DuplicatedFieldError(:name, OptionA))
     println(DuplicatedAliasError("alias"))
+end
+
+module Issue50
+
+using Configurations
+
+@option struct OptionA
+    name::Maybe{String}=nothing
+    int::Int = 1
+end
+
+@option struct OptionB
+    name::Maybe{OptionA}=nothing
+    int::Int = 1
+end
+
+end
+
+@testset "to_dict style" begin
+    option = Issue50.OptionB()
+    @test to_dict(option, TOMLStyle) == to_dict(option; include_defaults=true, exclude_nothing=true)
+    @test to_dict(option, YAMLStyle) == to_dict(option; include_defaults=true, exclude_nothing=false)
+    @test to_dict(option, JSONStyle) == to_dict(option; include_defaults=true, exclude_nothing=false)
+end
+
+@testset "#50" begin
+    @test from_dict(Issue50.OptionB, Dict{String,Any}("name"=>nothing)) == Issue50.OptionB()
 end

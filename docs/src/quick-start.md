@@ -224,6 +224,61 @@ For other formats, as long as you can convert them to a subtype of `AbstractDict
 you can always convert it to the option type you just defined via `from_dict`, however
 for the sake of simplicity Configurations will not ship such functionality with it.
 
+## Write to TOML
+To write the option struct to a TOML file, simply use the `to_toml` function
+
+```julia
+julia> to_toml(option; include_defaults=false) # write to a String
+
+julia> to_toml("test.toml", option; include_defaults=false) # write to a file
+```
+
+You may also be interested in the docstring of `to_toml`
+
+```@docs
+to_toml
+```
+
+## Write to YAML
+
+To write the option struct to other formats, you need to convert it to a dictionary type
+first via `to_dict`
+
+```@docs
+to_dict
+```
+
+Then you can use YAML package to write the dict to a YAML file
+
+```julia
+julia> using YAML, Configurations
+
+julia> d = to_dict(your_option, YAMLStyle)
+
+julia> YAML.write_file("myfile.yaml", d)
+```
+
+## Write to JSON
+
+or for JSON, we recommend using [JSON](https://github.com/JuliaIO/JSON.jl) or [JSON3](https://github.com/quinnj/JSON3.jl) to write the file as following
+
+for `JSON`
+
+```julia
+julia> using JSON, Configurations
+
+julia> d = to_dict(your_option, JSONStyle)
+
+julia> open("file.json", "w") do f
+           JSON.print(f, d)
+       end
+```
+
+## Write to other formats
+
+For other formats, you can convert your option struct to an `OrderedDict{String, Any}` via
+[`to_dict`](@ref) then serialize the dictionary to your desired format.
+
 ## Type Conversion
 
 Since markup languages usually do not support arbitrary Julia types, thus, one may find the `from_dict`
