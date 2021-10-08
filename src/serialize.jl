@@ -7,8 +7,25 @@ end
     exclude_nothing::Bool=false
 end
 
+"""
+    TOMLStyle::ToDictOption
+
+Predefined option for TOML compatible [`to_dict`](@ref) option.
+"""
 const TOMLStyle = ToDictOption(include_defaults=true, exclude_nothing=true)
+
+"""
+    YAMLStyle::ToDictOption
+
+Predefined option for YAML compatible [`to_dict`](@ref) option.
+"""
 const YAMLStyle = ToDictOption(include_defaults=true, exclude_nothing=false)
+
+"""
+    JSONStyle::ToDictOption
+
+Predefined option for JSON compatible [`to_dict`](@ref) option.
+"""
 const JSONStyle = ToDictOption(include_defaults=true, exclude_nothing=false)
 
 """
@@ -21,6 +38,13 @@ Convert an object `x` to an `OrderedDict`.
 - `include_defaults`: include the default value, default is `true`.
 - `exclude_nothing`: exclude fields that have value `nothing`,
     this supersedes `include_defaults` when they are both `true`.
+
+# Format Compatibilty
+
+When mapping an option struct from Julia to TOML/YAML/JSON/etc. format,
+there are some subtle semantic compatibilty one need to deal with, we provide
+some convenient predefined conversion option constants as [`TOMLStyle`](@ref),
+[`YAMLStyle`](@ref), [`JSONStyle`](@ref).
 
 !!! tips
     `to_dict` does not export fields that are of the same values as the defaults. 
