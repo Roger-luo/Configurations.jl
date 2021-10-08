@@ -640,3 +640,7 @@ end
     @test to_dict(option, YAMLStyle) == to_dict(option; include_defaults=true, exclude_nothing=false)
     @test to_dict(option, JSONStyle) == to_dict(option; include_defaults=true, exclude_nothing=false)
 end
+
+@testset "#50" begin
+    @test from_dict(Issue50.OptionB, Dict{String,Any}("name"=>nothing)) == Issue50.OptionB()
+end
