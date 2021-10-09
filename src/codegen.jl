@@ -141,7 +141,7 @@ function has_duplicated_reflect_type(m::Module, def::JLKwStruct)
 end
 
 function is_reflect_type_expr(m::Module, @nospecialize(ex))
-    if isdefined(m, :Reflect) && (eval(GlobalRef(m, :Reflect)) === Reflect)
+    if isdefined(m, :Reflect) && (getfield(m, :Reflect) === Reflect)
         ex === :Reflect && return true
     end
     # no need to check definition
@@ -157,7 +157,7 @@ function is_reflect_type_expr(m::Module, @nospecialize(ex))
 end
 
 function is_maybe_type_expr(m::Module, @nospecialize(ex))
-    if isdefined(m, :Maybe) && (eval(GlobalRef(m, :Maybe)) === Maybe)
+    if isdefined(m, :Maybe) && (getfield(m, :Maybe) === Maybe)
         _is_maybe_type_expr(ex) && return true
     end
 
