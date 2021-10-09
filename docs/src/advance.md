@@ -7,6 +7,13 @@ CurrentModule = Configurations
 For most use cases, the default API [`@option`](@ref) is sufficient, however, there are some
 specific cases requires one to use `Configurations`'s advanced API.
 
+## Reflect Type
+
+One can use `Reflect` type to denote a field contains the type information of the struct.
+
+```@docs
+Reflect
+```
 
 ## Alias
 

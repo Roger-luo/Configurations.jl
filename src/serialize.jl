@@ -155,7 +155,11 @@ function _option_to_dict(x, option::ToDictOption)
                 # is used as a normal type
                 # `Reflect` should be only used to denote
                 # a field contains the type info as a `String`.
-                d[name_str] = full_typename(T)
+                if type_alias(T) === nothing
+                    d[name_str] = full_typename(T)
+                else
+                    d[name_str] = type_alias(T)
+                end
             elseif is_option(value) && is_union_of_multiple_options(type)
                 if contains_reflect_type(typeof(value))
                     d[name_str] = field_dict
