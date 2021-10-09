@@ -213,15 +213,7 @@ function from_dict_inner(::Type{T}, @nospecialize(d), root::Bool=false) where T
 
     if contains_reflect_type(T) && root
         # NOTE: for 1.0 compat
-        # idx = findfirst(x->x === Reflect, fieldtypes(T))
-        idx = 0
-        for i in 1:fieldcount(T)
-            if fieldtype(T, i) === Reflect
-                idx = i
-                break
-            end
-        end
-
+        idx = findfirst(x->x === Reflect, fieldtypes(T))
         key = string(fieldname(T, idx))
         haskey(d, key) || throw(ArgumentError("expect key: $key"))
 

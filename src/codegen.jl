@@ -165,7 +165,10 @@ function is_maybe_type_expr(m::Module, @nospecialize(ex))
         ex.name === :Maybe && return true
     end
 
-    ex isa Type && ex <: Maybe && return true
+    if ex isa Type && ex isa Union && Nothing <: ex
+        return true
+    end
+
     ex isa Expr || return false
     if ex.head === :.
         if ex.args[1] === Configurations || ex.args[1] === :Configurations

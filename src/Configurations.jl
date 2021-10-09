@@ -29,6 +29,14 @@ export no_default,
     YAMLStyle,
     JSONStyle
 
+@static if VERSION < v"1.1"
+    function fieldtypes(T::Type)
+        ntuple(fieldcount(T)) do idx
+            fieldtype(T, idx)
+        end
+    end
+end
+
 include("types.jl")
 include("convert.jl")
 include("reflection.jl")

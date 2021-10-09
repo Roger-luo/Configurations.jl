@@ -2,7 +2,7 @@ using Configurations
 using ExproniconLite
 using Configurations: to_dict, from_kwargs, from_dict, alias,
     from_toml, no_default, field_defaults, field_default,
-    PartialDefault, field_keywords
+    PartialDefault, field_keywords, has_duplicated_reflect_type
 using OrderedCollections
 using Test
 using TOML
@@ -727,6 +727,17 @@ end
         end
 
         @test_throws ArgumentError Configurations.option_m(Main, ex)
+
+        ex = @expr JLKwStruct struct OptionError
+            type_a::Reflect
+            type_b::Reflect
+            age::Int
+        end
+        @test has_duplicated_reflect_type(Main, ex)
+
+        ex = @expr JLKwStruct struct OptionB
+        end
+        @test !has_duplicated_reflect_type(Main ,ex)
     end
 end
 
@@ -750,6 +761,12 @@ end
     @test AutoMaybeDefault2() == AutoMaybeDefault2(2, nothing)
 end
 
+module NoMaybe
+using Test
+using Configurations: Configurations, @option, is_maybe_type_expr
+struct Maybe{T} end
+end # NoMaybe
+
 @testset "is_maybe_type_expr" begin
     @test is_maybe_type_expr(AutoMaybeDefault, Maybe)
     @test is_maybe_type_expr(AutoMaybeDefault, :Maybe)
@@ -771,6 +788,27 @@ end
     gref = GlobalRef(Configurations, :Maybe)
     @test is_maybe_type_expr(AutoMaybeDefault, gref)
     @test is_maybe_type_expr(AutoMaybeDefault, :($gref{Int}))
+
+    @test !is_maybe_type_expr(NoMaybe, NoMaybe.Maybe)
+    @test !is_maybe_type_expr(NoMaybe, :Maybe)
+    @test !is_maybe_type_expr(NoMaybe, :(Maybe{Int}))
+    @test !is_maybe_type_expr(NoMaybe, :($Maybe{Int}))
+    @test !is_maybe_type_expr(NoMaybe, :($(NoMaybe.Maybe{Int})))
+    @test !is_maybe_type_expr(NoMaybe, NoMaybe.Maybe{Int})
+
+    @test is_maybe_type_expr(NoMaybe, :(Configurations.Maybe))
+    @test is_maybe_type_expr(NoMaybe, :(Configurations.Maybe{Int}))
+    @test is_maybe_type_expr(NoMaybe, :(Configurations.$Maybe{Int}))
+    @test is_maybe_type_expr(NoMaybe, :(Configurations.$(Maybe{Int})))
+
+    @test is_maybe_type_expr(NoMaybe, :($Configurations.Maybe))
+    @test is_maybe_type_expr(NoMaybe, :($Configurations.Maybe{Int}))
+    @test is_maybe_type_expr(NoMaybe, :($Configurations.$Maybe{Int}))
+    @test is_maybe_type_expr(NoMaybe, :($Configurations.$(Maybe{Int})))
+
+    gref = GlobalRef(Configurations, :Maybe)
+    @test is_maybe_type_expr(NoMaybe, gref)
+    @test is_maybe_type_expr(NoMaybe, :($gref{Int}))
 end
 
 end
