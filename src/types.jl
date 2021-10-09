@@ -19,6 +19,33 @@ function Base.show(io::IO, x::PartialDefault)
 end
 
 """
+    Reflect
+
+Placeholder type for reflected type string.
+
+# Example
+
+the following option struct
+
+```julia
+@option struct MyOption
+    type::Reflect
+    name::String = "Sam"
+end
+```
+
+would be equivalent to
+
+```toml
+type = "MyOption"
+name = "Sam"
+```
+
+this is useful for defining list of different types etc.
+"""
+struct Reflect end
+
+"""
     create(::Type{T}; kwargs...) where T
     
 Create an instance of option type `T` from `kwargs`. Similar

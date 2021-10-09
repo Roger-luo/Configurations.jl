@@ -390,7 +390,7 @@ end
 end
 
 @testset "custom kwfn" begin
-    @test CustomKwFn() == CustomKwFn(1.0)    
+    @test CustomKwFn() == CustomKwFn(1.0)
 end
 
 @option struct ExtraKwFn
@@ -405,7 +405,7 @@ end
 end
 
 @testset "kwargs forward" begin
-    @test ExtraKwFn(;a = 3) == ExtraKwFn(3)    
+    @test ExtraKwFn(;a = 3) == ExtraKwFn(3)
 end
 
 @option struct DefaultResolve
@@ -414,7 +414,7 @@ end
 end
 
 @testset "default resolve" begin
-    @test field_default(DefaultResolve, :b)(1) == sin(1)    
+    @test field_default(DefaultResolve, :b)(1) == sin(1)
 end
 
 @testset "non-option type handling" begin
@@ -643,4 +643,98 @@ end
 
 @testset "#50" begin
     @test from_dict(Issue50.OptionB, Dict{String,Any}("name"=>nothing)) == Issue50.OptionB()
+end
+
+module Reflected
+
+using Configurations
+
+@option struct OptionA
+    type::Reflect
+    name::String
+    age::Int
+end
+
+@option struct OptionB
+    type::Reflect
+    name::String
+end
+
+@option struct OptionC{T}
+    type::Reflect
+    typevar::T
+end
+
+@option struct Composite
+    person::Union{OptionA, OptionB, OptionC}
+end
+
+end
+
+@testset "Reflect Type" begin
+    @testset "OptionA" begin
+        opt = Reflected.OptionA(Reflect(), "Sam", 2)
+        @test opt == Reflected.OptionA(;name="Sam", age=2)
+        d = to_dict(opt)
+        @test from_dict(Reflected.OptionA, d) == opt
+    end
+
+    @testset "OptionC{T}" begin
+        opt = Reflected.OptionC(Reflect(), 2)
+        @test opt == Reflected.OptionC(;typevar=2)
+        d = to_dict(opt)
+
+        @test_throws ArgumentError from_dict(Reflected.OptionC, d)
+        @test_throws ArgumentError from_dict(Reflected.OptionC{Float32}, d)
+        @test from_dict(Reflected.OptionC{Int}, d) == Reflected.OptionC(Reflect(), 2)
+    end
+
+    @testset "Composite" begin
+        opt = Reflected.Composite(
+            Reflected.OptionA(Reflect(), "Sam", 2),
+        )
+
+        d = to_dict(opt)
+        from_dict(Reflected.Composite, d)
+
+        opt = Reflected.Composite(
+            Reflected.OptionB(Reflect(), "Sam"),
+        )
+        d = to_dict(opt)
+        from_dict(Reflected.Composite, d)
+
+        opt = Reflected.Composite(
+            Reflected.OptionC(Reflect(), "Sam"),
+        )
+        d = to_dict(opt)
+        from_dict(Reflected.Composite, d)
+
+        d = Dict(
+            "person" => Dict{String, Any}(
+                "type" => "Main.Reflected.OptionC{Float32}",
+                "typevar" => 2
+            )
+        )
+        opt = from_dict(Reflected.Composite, d)
+        @test typeof(opt.person) <: Reflected.OptionC{Float32}
+    end
+
+    @testset "duplicated Reflect" begin
+        ex = @expr struct OptionError
+            type_a::Reflect
+            type_b::Reflect
+            age::Int
+        end
+
+        @test_throws ArgumentError Configurations.option_m(Main, ex)
+    end
+end
+
+@option struct AutoMaybeDefault
+    a::Maybe{Int} = 2
+    b::Maybe{Int}
+end
+
+@testset "auto maybe default" begin
+    @test AutoMaybeDefault() == AutoMaybeDefault(2, nothing)    
 end

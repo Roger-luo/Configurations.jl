@@ -95,8 +95,9 @@ Convert keyword arguments to given option type `T` using the field keyword conve
 """
 from_field_kwargs(::Type{T}; kw...) where T = from_kwargs(from_field_kwargs!, T; kw...)
 
-function from_dict_validate(::Type{T}, d::AbstractDict{String}) where T
+function from_dict_validate(::Type{T}, d::AbstractDict{String}, root::Bool=true) where T
     assert_option(T)
+    isconcretetype(T) || throw(ArgumentError("expect concrete type, got $T"))
 
     for k in keys(d)
         k == "#filename#" && continue
@@ -110,7 +111,7 @@ function from_dict_validate(::Type{T}, d::AbstractDict{String}) where T
         end
     end
 
-    return from_dict_inner(T, d)
+    return from_dict_inner(T, d, root)
 end
 
 struct DuplicatedAliasError <: Exception
@@ -154,6 +155,13 @@ pick_union(::Type{T}, x) where T = T, x
 function pick_union(::Type{T}, d::AbstractDict{String}) where T
     if !(T isa Union)
         T === Nothing && return
+
+        # if the option struct contains Reflect field
+        # we will use this field to address type info
+        # which supersedes type alias
+        idx = findfirst(x->x === Reflect, fieldtypes(T))
+        idx === nothing || return pick_union_reflect_type(T, idx, d)
+
         is_option(T) || return T, d
         if haskey(d, type_alias(T))
             return T, d[type_alias(T)]
@@ -165,13 +173,28 @@ function pick_union(::Type{T}, d::AbstractDict{String}) where T
     assert_union_alias(T)
 
     ret_a = pick_union(T.a, d)
-    ret_b = pick_union(T.b, d)
-
     if ret_a === nothing
+        ret_b = pick_union(T.b, d)
         return ret_b
     else
         return ret_a
     end
+end
+
+function pick_union_reflect_type(::Type{T}, reflect_field_idx::Int, d::AbstractDict{String}) where T
+    reflected_field = fieldname(T, reflect_field_idx)
+    reflected_field_str = string(reflected_field)
+    haskey(d, reflected_field_str) || return
+    type = parse_jltype(d[reflected_field_str])
+    d[reflected_field_str] = Reflect()
+    return type, d
+end
+
+function parse_jltype(s)
+    s isa String || throw(ArgumentError("expect type String, got: $(typeof(s))"))
+    type_ex = Meta.parse(s)
+    # is_datatype_expr(type_ex) || throw(ArgumentError("expect type expression got: $type_ex"))
+    return eval(type_ex)
 end
 
 """
@@ -182,14 +205,27 @@ to type `T`, this method will not check if `T` is an option type
 via `is_option`, and will not validate if all the required fields
 are available in the dict object.
 """
-function from_dict_inner(::Type{T}, @nospecialize(d)) where T
+function from_dict_inner(::Type{T}, @nospecialize(d), root::Bool=false) where T
     d isa AbstractDict{String} || error("cannot convert $d to $T, expect $T <: AbstractDict{String}")
+
+    if contains_reflect_type(T) && root
+        idx = findfirst(x->x === Reflect, fieldtypes(T))
+        key = string(fieldname(T, idx))
+        haskey(d, key) || throw(ArgumentError("expect key: $key"))
+
+        value = d[key]
+        dst_type = parse_jltype(value)
+        dst_type <: T || throw(ArgumentError("type mismatch, expect $T got $value"))
+    else
+        dst_type = T
+    end
+
     args = Any[]
-    for each in fieldnames(T)
+    for each in fieldnames(dst_type)
         key = string(each)
-        type = fieldtype(T, each)
-        default = field_default(T, each)
-        
+        type = fieldtype(dst_type, each)
+        default = field_default(dst_type, each)
+
         if default === no_default
             if type isa Union
                 pick = pick_union(type, d[key])
@@ -214,17 +250,19 @@ function from_dict_inner(::Type{T}, @nospecialize(d)) where T
 
         if is_option(type) && value isa AbstractDict{String}
             # need some assertions so we call from_dict_validate
-            push!(args, from_dict_validate(type, value))
+            push!(args, from_dict_validate(type, value, false))
         elseif value isa AbstractDict && isempty(value) && Nothing <: type
             # empty collection
             push!(args, nothing)
+        elseif type === Reflect
+            push!(args, Reflect())
         else
-            v = convert_union_to_option(T, type, value)
+            v = convert_union_to_option(dst_type, type, value)
             push!(args, v)
         end
     end
 
-    return T(args...)
+    return dst_type(args...)
 end
 
 # NOTE: this is for compatibilty
