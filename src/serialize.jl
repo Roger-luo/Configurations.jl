@@ -190,7 +190,12 @@ function full_typename(jltype::DataType)
     end
 end
 
-contains_reflect_type(::Type{T}) where T = Reflect in fieldtypes(T)
+function contains_reflect_type(::Type{T}) where T
+    for idx in 1:fieldcount(T)
+        Reflect === fieldtype(T, idx) && return true
+    end
+    return false
+end
 
 function is_union_of_multiple_options(::Type{T}) where T
     T isa Union || return false
