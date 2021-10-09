@@ -218,6 +218,26 @@ julia> from_dict(MyOption, d)
 MyOption(1, 2.1)
 ```
 
+or for [JSON3](https://github.com/quinnj/JSON3.jl) you can use the following
+
+```julia
+julia> using JSON3, Configurations
+
+julia> @option struct OptionA
+        x::String = "hi"
+        y::Vector{String} = String[]
+           end
+
+julia> d = JSON3.read("""
+           {"y": ["a"]}
+           """, Dict{String, Any})
+Dict{String, Any} with 1 entry:
+  "y" => Any["a"]
+
+julia> from_dict(OptionA, d)
+OptionA("hi", ["a"])
+```
+
 ## Read other formats
 
 For other formats, as long as you can convert them to a subtype of `AbstractDict{String}`,
@@ -274,10 +294,46 @@ julia> open("file.json", "w") do f
        end
 ```
 
+for `JSON3` you can use the following code snippet
+
+```julia
+julia> using JSON3, Configurations
+
+julia> @option struct OptionA
+        x::String = "hi"
+        y::Vector{String} = String[]
+    end
+
+julia> d = to_dict(OptionA(y=["a"]))
+
+julia> JSON3.write(d)
+"{\"x\":\"hi\",\"y\":[\"a\"]}"
+
+julia> JSON3.write("file.json", d) # write to a file
+"file.json"
+```
+
 ## Write to other formats
 
 For other formats, you can convert your option struct to an `OrderedDict{String, Any}` via
 [`to_dict`](@ref) then serialize the dictionary to your desired format.
+
+## Work with `StructTypes` and `JSON3`
+
+One can work with [`StructType`](https://github.com/JuliaData/StructTypes.jl) with `Configurations`
+to make `JSON.read(json_string, MyOptionType)` work automatically by copying the following code
+and replace `MyOptionType` with your own option struct types.
+
+```julia
+using StructTypes
+using Configurations
+StructTypes.StructType(::Type{<:MyOptionType}) = StructTypes.CustomStruct()
+StructTypes.lower(x::MyOptionType) = to_dict(x, JSONStyle)
+StructTypes.lowertype(::Type{<:MyOptionType}) = OrderedDict{String, Any}
+StructTypes.construct(::Type{T}, x) where {T <: MyOptionType} = from_dict(T, x)
+```
+
+then `JSON.read("// a json string or IO", MyOptionType)` will just work.
 
 ## Type Conversion
 
