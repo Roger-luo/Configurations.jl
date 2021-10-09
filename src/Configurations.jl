@@ -8,6 +8,7 @@ using OrderedCollections
 
 export no_default,
     Maybe,
+    Reflect,
     # reflection
     field_default,
     # field_alias,
@@ -27,6 +28,14 @@ export no_default,
     TOMLStyle,
     YAMLStyle,
     JSONStyle
+
+@static if VERSION < v"1.1"
+    function fieldtypes(T::Type)
+        ntuple(fieldcount(T)) do idx
+            fieldtype(T, idx)
+        end
+    end
+end
 
 include("types.jl")
 include("convert.jl")

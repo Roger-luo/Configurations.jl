@@ -91,6 +91,10 @@ end
 function option_m(mod::Module, ex, type_alias=nothing)
     ex = macroexpand(mod, ex)
     def = JLKwStruct(ex, type_alias)
+    has_duplicated_reflect_type(mod, def) && throw(
+        ArgumentError("struct fields contain duplicated `Reflect` type")
+    )
+    add_field_defaults!(mod, def)
     return codegen_option_type(def)
 end
 
@@ -112,6 +116,84 @@ function codegen_option_type(def::JLKwStruct)
         $(codegen_isequal(def))
         nothing
     end
+end
+
+function add_field_defaults!(m::Module, def::JLKwStruct)
+    for field in def.fields
+        if is_reflect_type_expr(m, field.type)
+            field.default = Reflect()
+        elseif is_maybe_type_expr(m, field.type) && field.default === no_default
+            field.default = nothing
+        end
+    end
+    return def
+end
+
+function has_duplicated_reflect_type(m::Module, def::JLKwStruct)
+    has_reflect_type = false
+    for field in def.fields
+        if is_reflect_type_expr(m, field.type)
+            has_reflect_type && return true
+            has_reflect_type = true
+        end
+    end
+    return false
+end
+
+function is_reflect_type_expr(m::Module, @nospecialize(ex))
+    if isdefined(m, :Reflect) && (eval(GlobalRef(m, :Reflect)) === Reflect)
+        ex === :Reflect && return true
+    end
+    # no need to check definition
+    ex == Reflect && return true
+    ex == GlobalRef(Configurations, :Reflect) && return true
+    ex == :($Configurations.Reflect) && return true
+    ex == :($Configurations.$Reflect) && return true
+    ex == :(Configurations.$Reflect) && return true
+    if isdefined(m, :Configurations)
+        ex == :(Configurations.Reflect) && return true
+    end
+    return false
+end
+
+function is_maybe_type_expr(m::Module, @nospecialize(ex))
+    if isdefined(m, :Maybe) && (eval(GlobalRef(m, :Maybe)) === Maybe)
+        _is_maybe_type_expr(ex) && return true
+    end
+
+    if ex isa GlobalRef && ex.mod === Configurations
+        ex.name === :Maybe && return true
+    end
+
+    if ex isa Type && ex isa Union && Nothing <: ex
+        return true
+    end
+
+    ex isa Expr || return false
+    if ex.head === :.
+        if ex.args[1] === Configurations || ex.args[1] === :Configurations
+            return _is_maybe_type_expr(ex.args[2])
+        end
+    elseif ex.head === :curly
+        return is_maybe_type_expr(m, ex.args[1])
+    end
+    return false
+end
+
+function _is_maybe_type_expr(@nospecialize(ex))
+    ex === Maybe && return true
+    ex === :Maybe && return true
+    if ex isa QuoteNode
+        ex.value === :Maybe && return true
+        ex.value isa Type && ex.value <: Maybe && return true
+    end
+
+    ex isa Expr || return false
+    if ex.head === :curly
+        ex.args[1] === :Maybe && return true
+        ex.args[1] isa Type && ex.args[1] <: Maybe && return true
+    end
+    return false
 end
 
 """

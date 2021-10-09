@@ -2,7 +2,7 @@ using Configurations
 using ExproniconLite
 using Configurations: to_dict, from_kwargs, from_dict, alias,
     from_toml, no_default, field_defaults, field_default,
-    PartialDefault, field_keywords
+    PartialDefault, field_keywords, has_duplicated_reflect_type
 using OrderedCollections
 using Test
 using TOML
@@ -76,6 +76,18 @@ dict4 = OrderedDict{String, Any}(
 
 option = from_dict(OptionB, dict1)
 option3 = from_dict(OptionB, dict3)
+
+@static if VERSION < v"1.1"
+    @test Configurations.fieldtypes(OptionA) == (String, Int)
+end
+
+@testset "printing" begin
+    println(PartialDefault(x->x+1, [:x], :(x+1)))
+    println(InvalidKeyError(:name, [:a, :b, :c, :d]))
+    println(InvalidKeyError(:name, [Symbol(:a, idx) for idx in 1:10]))
+    println(DuplicatedFieldError(:name, OptionA))
+    println(DuplicatedAliasError("alias"))
+end
 
 @testset "options" begin
     @test option == OptionB(;
@@ -390,7 +402,7 @@ end
 end
 
 @testset "custom kwfn" begin
-    @test CustomKwFn() == CustomKwFn(1.0)    
+    @test CustomKwFn() == CustomKwFn(1.0)
 end
 
 @option struct ExtraKwFn
@@ -405,7 +417,7 @@ end
 end
 
 @testset "kwargs forward" begin
-    @test ExtraKwFn(;a = 3) == ExtraKwFn(3)    
+    @test ExtraKwFn(;a = 3) == ExtraKwFn(3)
 end
 
 @option struct DefaultResolve
@@ -414,7 +426,7 @@ end
 end
 
 @testset "default resolve" begin
-    @test field_default(DefaultResolve, :b)(1) == sin(1)    
+    @test field_default(DefaultResolve, :b)(1) == sin(1)
 end
 
 @testset "non-option type handling" begin
@@ -610,37 +622,6 @@ end
     @test_throws DuplicatedAliasError from_dict(DuplicatedAlias, d)
 end
 
-@testset "printing" begin
-    println(PartialDefault(x->x+1, [:x], :(x+1)))
-    println(InvalidKeyError(:name, [:a, :b, :c, :d]))
-    println(InvalidKeyError(:name, [Symbol(:a, idx) for idx in 1:10]))
-    println(DuplicatedFieldError(:name, OptionA))
-    println(DuplicatedAliasError("alias"))
-end
-
-module Issue50
-
-using Configurations
-
-@option struct OptionA
-    name::Maybe{String}=nothing
-    int::Int = 1
-end
-
-@option struct OptionB
-    name::Maybe{OptionA}=nothing
-    int::Int = 1
-end
-
-end
-
-@testset "to_dict style" begin
-    option = Issue50.OptionB()
-    @test to_dict(option, TOMLStyle) == to_dict(option; include_defaults=true, exclude_nothing=true)
-    @test to_dict(option, YAMLStyle) == to_dict(option; include_defaults=true, exclude_nothing=false)
-    @test to_dict(option, JSONStyle) == to_dict(option; include_defaults=true, exclude_nothing=false)
-end
-
-@testset "#50" begin
-    @test from_dict(Issue50.OptionB, Dict{String,Any}("name"=>nothing)) == Issue50.OptionB()
-end
+include("test_issue50.jl")
+include("test_reflected.jl")
+include("test_auto_maybe_default.jl")

@@ -134,6 +134,7 @@ function _option_to_dict(x, option::ToDictOption)
     for name in fieldnames(T)
         type = fieldtype(T, name)
         value = getfield(x, name)
+        name_str = string(name)
         if option.exclude_nothing && value === nothing
             continue
         end
@@ -141,22 +142,59 @@ function _option_to_dict(x, option::ToDictOption)
         if option.include_defaults || value != field_default(T, name)
             field_dict = to_dict(T, value, option)
 
-            # always add an alias if it's a Union
+            # 1. option type contains field of type Reflect
+            # 2. option type contains field of Union{options...}
+            # 3. other types
+            #
+            # NOTE:
+            # we always add an alias if it's a Union
             # of multiple option types
-            if is_option(value) && is_union_of_multiple_options(type)
+            if type === Reflect
+                # we don't implement this via `to_dict`
+                # because we want it error when `Reflect`
+                # is used as a normal type
+                # `Reflect` should be only used to denote
+                # a field contains the type info as a `String`.
+                d[name_str] = full_typename(T)
+            elseif is_option(value) && is_union_of_multiple_options(type)
+                if contains_reflect_type(typeof(value))
+                    d[name_str] = field_dict
+                    continue
+                end
+
                 if type_alias(typeof(value)) === nothing
                     error("please define an alias for option type $(typeof(value))")
                 end
 
-                d[string(name)] = OrderedDict{String, Any}(
+                d[name_str] = OrderedDict{String, Any}(
                     type_alias(typeof(value)) => field_dict,
                 )
             else
-                d[string(name)] = field_dict
+                d[name_str] = field_dict
             end
         end
     end
     return d
+end
+
+# NOTE: copied from JLD
+# https://github.com/JuliaIO/JLD.jl/blob/83ea0c5ef7293c78d7d9c8ffdf9ede599b54dc4c/src/JLD00.jl#L991
+# we only have DataType to serialize
+function full_typename(jltype::DataType)
+    tname = string(jltype.name.module, ".", jltype.name.name)
+    if isempty(jltype.parameters)
+        return tname
+    else
+        params_str = join([full_typename(x) for x in jltype.parameters], ",")
+        return string(tname, "{", params_str, "}")
+    end
+end
+
+function contains_reflect_type(::Type{T}) where T
+    for idx in 1:fieldcount(T)
+        Reflect === fieldtype(T, idx) && return true
+    end
+    return false
 end
 
 function is_union_of_multiple_options(::Type{T}) where T
@@ -168,6 +206,12 @@ function is_union_of_multiple_options(::Type{T}) where T
     return is_option_maybe(T.a) && is_option_maybe(T.b)
 end
 
+"""
+    is_option_maybe(::Type{T}) where T
+
+`T` is an option struct or if `T` is an union, one of the types
+is an option struct.
+"""
 function is_option_maybe(::Type{T}) where T
     is_option(T) && return true
     T isa Union || return false
