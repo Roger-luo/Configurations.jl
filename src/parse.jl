@@ -159,8 +159,11 @@ function pick_union(::Type{T}, d::AbstractDict{String}) where T
         # if the option struct contains Reflect field
         # we will use this field to address type info
         # which supersedes type alias
-        idx = findfirst(x->x === Reflect, fieldtypes(T))
-        idx === nothing || return pick_union_reflect_type(T, idx, d)
+        for idx in 1:fieldcount(T)
+            if fieldtype(T, idx) === Reflect
+                return pick_union_reflect_type(T, idx, d)
+            end
+        end
 
         is_option(T) || return T, d
         if haskey(d, type_alias(T))
@@ -209,7 +212,16 @@ function from_dict_inner(::Type{T}, @nospecialize(d), root::Bool=false) where T
     d isa AbstractDict{String} || error("cannot convert $d to $T, expect $T <: AbstractDict{String}")
 
     if contains_reflect_type(T) && root
-        idx = findfirst(x->x === Reflect, fieldtypes(T))
+        # NOTE: for 1.0 compat
+        # idx = findfirst(x->x === Reflect, fieldtypes(T))
+        idx = 0
+        for i in 1:fieldcount(T)
+            if fieldtype(T, i) === Reflect
+                idx = i
+                break
+            end
+        end
+
         key = string(fieldname(T, idx))
         haskey(d, key) || throw(ArgumentError("expect key: $key"))
 

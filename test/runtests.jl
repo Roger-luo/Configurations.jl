@@ -751,22 +751,26 @@ end
 end
 
 @testset "is_maybe_type_expr" begin
-    is_maybe_type_expr(AutoMaybeDefault, Maybe)
-    is_maybe_type_expr(AutoMaybeDefault, :Maybe)
-    is_maybe_type_expr(AutoMaybeDefault, :(Maybe{Int}))
-    is_maybe_type_expr(AutoMaybeDefault, :($Maybe{Int}))
-    is_maybe_type_expr(AutoMaybeDefault, :($(Maybe{Int})))
-    is_maybe_type_expr(AutoMaybeDefault, Maybe{Int})
+    @test is_maybe_type_expr(AutoMaybeDefault, Maybe)
+    @test is_maybe_type_expr(AutoMaybeDefault, :Maybe)
+    @test is_maybe_type_expr(AutoMaybeDefault, :(Maybe{Int}))
+    @test is_maybe_type_expr(AutoMaybeDefault, :($Maybe{Int}))
+    @test is_maybe_type_expr(AutoMaybeDefault, :($(Maybe{Int})))
+    @test is_maybe_type_expr(AutoMaybeDefault, Maybe{Int})
 
-    is_maybe_type_expr(AutoMaybeDefault, :(Configurations.Maybe))
-    is_maybe_type_expr(AutoMaybeDefault, :(Configurations.Maybe{Int}))
-    is_maybe_type_expr(AutoMaybeDefault, :(Configurations.$Maybe{Int}))
-    is_maybe_type_expr(AutoMaybeDefault, :(Configurations.$(Maybe{Int})))
+    @test is_maybe_type_expr(AutoMaybeDefault, :(Configurations.Maybe))
+    @test is_maybe_type_expr(AutoMaybeDefault, :(Configurations.Maybe{Int}))
+    @test is_maybe_type_expr(AutoMaybeDefault, :(Configurations.$Maybe{Int}))
+    @test is_maybe_type_expr(AutoMaybeDefault, :(Configurations.$(Maybe{Int})))
 
-    is_maybe_type_expr(AutoMaybeDefault, :($Configurations.Maybe))
-    is_maybe_type_expr(AutoMaybeDefault, :($Configurations.Maybe{Int}))
-    is_maybe_type_expr(AutoMaybeDefault, :($Configurations.$Maybe{Int}))
-    is_maybe_type_expr(AutoMaybeDefault, :($Configurations.$(Maybe{Int})))
+    @test is_maybe_type_expr(AutoMaybeDefault, :($Configurations.Maybe))
+    @test is_maybe_type_expr(AutoMaybeDefault, :($Configurations.Maybe{Int}))
+    @test is_maybe_type_expr(AutoMaybeDefault, :($Configurations.$Maybe{Int}))
+    @test is_maybe_type_expr(AutoMaybeDefault, :($Configurations.$(Maybe{Int})))
+
+    gref = GlobalRef(Configurations, :Maybe)
+    @test is_maybe_type_expr(AutoMaybeDefault, gref)
+    @test is_maybe_type_expr(AutoMaybeDefault, :($gref{Int}))
 end
 
 end
