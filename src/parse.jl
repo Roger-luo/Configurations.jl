@@ -188,16 +188,32 @@ function pick_union_reflect_type(::Type{T}, reflect_field_idx::Int, d::AbstractD
     reflected_field = fieldname(T, reflect_field_idx)
     reflected_field_str = string(reflected_field)
     haskey(d, reflected_field_str) || return
-    type = parse_jltype(d[reflected_field_str])
+    value = d[reflected_field_str]
+    if type_alias(T) == value
+        type = T
+    else
+        type = tryparse_jltype(d[reflected_field_str])
+        type === nothing && return
+    end
     d[reflected_field_str] = Reflect()
     return type, d
 end
 
-function parse_jltype(s)
+function tryparse_jltype(s)
     s isa String || throw(ArgumentError("expect type String, got: $(typeof(s))"))
     type_ex = Meta.parse(s)
     is_datatype_expr(type_ex) || throw(ArgumentError("expect type expression got: $type_ex"))
-    return eval(type_ex)
+    try
+        return eval(type_ex)
+    catch
+        return
+    end
+end
+
+function parse_jltype(s)
+    type = tryparse_jltype(s)
+    type === nothing && throw(ArgumentError("cannot parse $s to a Julia type"))
+    return type
 end
 
 """
@@ -217,8 +233,10 @@ function from_dict_inner(::Type{T}, @nospecialize(d), root::Bool=false) where T
         haskey(d, key) || throw(ArgumentError("expect key: $key"))
 
         value = d[key]
-        dst_type = parse_jltype(value)
-        dst_type <: T || throw(ArgumentError("type mismatch, expect $T got $value"))
+        if type_alias(T) != value
+            dst_type = parse_jltype(value)
+            dst_type <: T || throw(ArgumentError("type mismatch, expect $T got $value"))
+        end
     else
         dst_type = T
     end

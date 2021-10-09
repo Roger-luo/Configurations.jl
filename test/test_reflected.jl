@@ -1,6 +1,10 @@
 module Reflected
 
+using Test
+using ExproniconLite
 using Configurations
+using OrderedCollections
+using Configurations: @option, Reflect, has_duplicated_reflect_type
 
 @option struct OptionA
     type::Reflect
@@ -18,10 +22,19 @@ end
     typevar::T
 end
 
-@option struct Composite
-    person::Union{OptionA, OptionB, OptionC}
+# NOTE: this is not supported yet
+# @option "aaa" struct OptionD{T}
+#     type::Reflect
+#     typevar::T
+# end
+
+@option "bbb" struct OptionE
+    type::Reflect
+    name::String
 end
 
+@option struct Composite
+    person::Union{OptionA, OptionB, OptionC, OptionE}
 end
 
 @testset "Reflect Type" begin
@@ -79,17 +92,34 @@ end
             age::Int
         end
 
-        @test_throws ArgumentError Configurations.option_m(Main, ex)
+        @test_throws ArgumentError Configurations.option_m(Reflected, ex)
 
         ex = @expr JLKwStruct struct OptionError
             type_a::Reflect
             type_b::Reflect
             age::Int
         end
-        @test has_duplicated_reflect_type(Main, ex)
+        @test has_duplicated_reflect_type(Reflected, ex)
 
         ex = @expr JLKwStruct struct OptionB
         end
-        @test !has_duplicated_reflect_type(Main ,ex)
+        @test !has_duplicated_reflect_type(Reflected ,ex)
+    end
+
+    @testset "type_alias as reflection" begin
+        opt = Reflected.Composite(
+            Reflected.OptionE(name="aaa")
+        )
+        d = to_dict(opt)
+        @test d == OrderedDict{String, Any}(
+            "person" => OrderedDict{String, Any}(
+                "type"=>"bbb",
+                "name"=>"aaa",
+            )
+        )
+        @test from_dict(Reflected.Composite, d) == opt
     end
 end
+
+
+end # Reflected
