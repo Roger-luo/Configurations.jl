@@ -77,6 +77,18 @@ dict4 = OrderedDict{String, Any}(
 option = from_dict(OptionB, dict1)
 option3 = from_dict(OptionB, dict3)
 
+@static if VERSION < v"1.1"
+    @test Configurations.fieldtypes(OptionA) == (String, Int)
+end
+
+@testset "printing" begin
+    println(PartialDefault(x->x+1, [:x], :(x+1)))
+    println(InvalidKeyError(:name, [:a, :b, :c, :d]))
+    println(InvalidKeyError(:name, [Symbol(:a, idx) for idx in 1:10]))
+    println(DuplicatedFieldError(:name, OptionA))
+    println(DuplicatedAliasError("alias"))
+end
+
 @testset "options" begin
     @test option == OptionB(;
         opt = OptionA(;
@@ -608,14 +620,6 @@ end
     )
 
     @test_throws DuplicatedAliasError from_dict(DuplicatedAlias, d)
-end
-
-@testset "printing" begin
-    println(PartialDefault(x->x+1, [:x], :(x+1)))
-    println(InvalidKeyError(:name, [:a, :b, :c, :d]))
-    println(InvalidKeyError(:name, [Symbol(:a, idx) for idx in 1:10]))
-    println(DuplicatedFieldError(:name, OptionA))
-    println(DuplicatedAliasError("alias"))
 end
 
 module Issue50

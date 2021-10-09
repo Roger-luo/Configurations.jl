@@ -196,7 +196,7 @@ end
 function parse_jltype(s)
     s isa String || throw(ArgumentError("expect type String, got: $(typeof(s))"))
     type_ex = Meta.parse(s)
-    # is_datatype_expr(type_ex) || throw(ArgumentError("expect type expression got: $type_ex"))
+    is_datatype_expr(type_ex) || throw(ArgumentError("expect type expression got: $type_ex"))
     return eval(type_ex)
 end
 
