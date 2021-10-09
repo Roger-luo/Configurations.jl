@@ -158,27 +158,38 @@ end
 
 function is_maybe_type_expr(m::Module, @nospecialize(ex))
     if isdefined(m, :Maybe)
-        return _is_maybe_type_expr(ex)
+        _is_maybe_type_expr(ex) && return true
     end
 
     # no need to check definition
     ex isa Type && ex <: Maybe && return true
     if ex isa GlobalRef && ex.mod === Configurations
-        return _is_maybe_type_expr(ex)
+        _is_maybe_type_expr(ex) && return true
     end
 
     ex isa Expr || return false
+    if ex.head === :curly
+        ex.args[1] isa Expr || return false
+        ex = ex.args[1]
+    end
     ex.head === :. || return false
     if ex.args[1] === Configurations || ex.args[1] === :Configurations
-        return false
+        return _is_maybe_type_expr(ex.args[2])
     end
-    return _is_maybe_type_expr(ex.args[2])
+    return false
 end
 
 function _is_maybe_type_expr(@nospecialize(ex))
     ex === :Maybe && return true
+    if ex isa QuoteNode
+        ex.value === :Maybe && return true
+        ex.value isa Type && ex.value <: Maybe && return true
+    end
     ex isa Expr || return false
-    ex.head === :curly && ex.args[1] === :Maybe && return true
+    if ex.head === :curly
+        ex.args[1] === :Maybe && return true
+        ex.args[1] isa Type && ex.args[1] <: Maybe && return true
+    end
     return false
 end
 

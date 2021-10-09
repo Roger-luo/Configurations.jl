@@ -730,11 +730,43 @@ end
     end
 end
 
-@option struct AutoMaybeDefault
+module AutoMaybeDefault
+
+using Test
+using Configurations: Configurations, @option, Maybe, is_maybe_type_expr
+
+@option struct AutoMaybeDefault1
     a::Maybe{Int} = 2
     b::Maybe{Int}
 end
 
+@option struct AutoMaybeDefault2
+    a::Configurations.Maybe{Int} = 2
+    b::Configurations.Maybe{Int}
+end
+
 @testset "auto maybe default" begin
-    @test AutoMaybeDefault() == AutoMaybeDefault(2, nothing)    
+    @test AutoMaybeDefault1() == AutoMaybeDefault1(2, nothing)
+    @test AutoMaybeDefault2() == AutoMaybeDefault2(2, nothing)
+end
+
+@testset "is_maybe_type_expr" begin
+    is_maybe_type_expr(AutoMaybeDefault, Maybe)
+    is_maybe_type_expr(AutoMaybeDefault, :Maybe)
+    is_maybe_type_expr(AutoMaybeDefault, :(Maybe{Int}))
+    is_maybe_type_expr(AutoMaybeDefault, :($Maybe{Int}))
+    is_maybe_type_expr(AutoMaybeDefault, :($(Maybe{Int})))
+    is_maybe_type_expr(AutoMaybeDefault, Maybe{Int})
+
+    is_maybe_type_expr(AutoMaybeDefault, :(Configurations.Maybe))
+    is_maybe_type_expr(AutoMaybeDefault, :(Configurations.Maybe{Int}))
+    is_maybe_type_expr(AutoMaybeDefault, :(Configurations.$Maybe{Int}))
+    is_maybe_type_expr(AutoMaybeDefault, :(Configurations.$(Maybe{Int})))
+
+    is_maybe_type_expr(AutoMaybeDefault, :($Configurations.Maybe))
+    is_maybe_type_expr(AutoMaybeDefault, :($Configurations.Maybe{Int}))
+    is_maybe_type_expr(AutoMaybeDefault, :($Configurations.$Maybe{Int}))
+    is_maybe_type_expr(AutoMaybeDefault, :($Configurations.$(Maybe{Int})))
+end
+
 end
