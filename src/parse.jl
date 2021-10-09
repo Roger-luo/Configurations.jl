@@ -212,7 +212,6 @@ function from_dict_inner(::Type{T}, @nospecialize(d), root::Bool=false) where T
     d isa AbstractDict{String} || error("cannot convert $d to $T, expect $T <: AbstractDict{String}")
 
     if contains_reflect_type(T) && root
-        # NOTE: for 1.0 compat
         idx = findfirst(x->x === Reflect, fieldtypes(T))
         key = string(fieldname(T, idx))
         haskey(d, key) || throw(ArgumentError("expect key: $key"))
