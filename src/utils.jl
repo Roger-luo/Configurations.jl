@@ -24,3 +24,49 @@ function compare_options(a::A, b::A) where {A}
     end
     return true
 end
+
+function tryparse_jltype(s)
+    s isa String || throw(ArgumentError("expect type String, got: $(typeof(s))"))
+    type_ex = Meta.parse(s)
+    is_datatype_expr(type_ex) || throw(ArgumentError("expect type expression got: $type_ex"))
+    try
+        return eval(type_ex)
+    catch
+        return
+    end
+end
+
+function parse_jltype(s)
+    type = tryparse_jltype(s)
+    type === nothing && throw(ArgumentError("cannot parse $s to a Julia type"))
+    return type
+end
+
+# NOTE: copied from JLD
+# https://github.com/JuliaIO/JLD.jl/blob/83ea0c5ef7293c78d7d9c8ffdf9ede599b54dc4c/src/JLD00.jl#L991
+# we only have DataType to serialize
+function full_typename(jltype::DataType)
+    tname = string(jltype.name.module, ".", jltype.name.name)
+    if isempty(jltype.parameters)
+        return tname
+    else
+        params_str = join([full_typename(x) for x in jltype.parameters], ",")
+        return string(tname, "{", params_str, "}")
+    end
+end
+
+function contains_reflect_type(::Type{T}) where T
+    for idx in 1:fieldcount(T)
+        Reflect === fieldtype(T, idx) && return true
+    end
+    return false
+end
+
+function is_union_of_multiple_options(::Type{T}) where T
+    T isa Union || return false
+    T.a === Nothing && return is_union_of_multiple_options(T.b)
+    T.b === Nothing && return is_union_of_multiple_options(T.a)
+    
+    # not option type
+    return is_option_maybe(T.a) && is_option_maybe(T.b)
+end

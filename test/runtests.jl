@@ -439,6 +439,10 @@ end
     option::Union{Nothing, OptionA, OptionB} = nothing
 end
 
+@option struct MultipleUnion
+    data::Union{String, Int, Float64}
+end
+
 @testset "multi-union to_dict/from_dict" begin
     d = OrderedDict{String, Any}(
         "option" => OrderedDict{String, Any}(
@@ -462,6 +466,11 @@ end
     x = UnionToDict(;option=OptionA(; name="Name"))
     d = to_dict(x)
     @test from_dict(UnionToDict, d) == x
+
+    d = Dict(
+        "data" => 1.2
+    )
+    @test from_dict(MultipleUnion, d) == MultipleUnion(1.2)
 end
 
 @option struct MacroExpand

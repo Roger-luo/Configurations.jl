@@ -39,41 +39,41 @@ end
 
 @testset "Reflect Type" begin
     @testset "OptionA" begin
-        opt = Reflected.OptionA(Reflect(), "Sam", 2)
-        @test opt == Reflected.OptionA(;name="Sam", age=2)
+        opt = OptionA(Reflect(), "Sam", 2)
+        @test opt == OptionA(;name="Sam", age=2)
         d = to_dict(opt)
-        @test from_dict(Reflected.OptionA, d) == opt
+        @test from_dict(OptionA, d) == opt
     end
 
     @testset "OptionC{T}" begin
-        opt = Reflected.OptionC(Reflect(), 2)
-        @test opt == Reflected.OptionC(;typevar=2)
+        opt = OptionC(Reflect(), 2)
+        @test opt == OptionC(;typevar=2)
         d = to_dict(opt)
 
-        @test_throws ArgumentError from_dict(Reflected.OptionC, d)
-        @test_throws ArgumentError from_dict(Reflected.OptionC{Float32}, d)
-        @test from_dict(Reflected.OptionC{Int}, d) == Reflected.OptionC(Reflect(), 2)
+        @test_throws ArgumentError from_dict(OptionC, d)
+        @test_throws ArgumentError from_dict(OptionC{Float32}, d)
+        @test from_dict(OptionC{Int}, d) == OptionC(Reflect(), 2)
     end
 
     @testset "Composite" begin
-        opt = Reflected.Composite(
-            Reflected.OptionA(Reflect(), "Sam", 2),
+        opt = Composite(
+            OptionA(Reflect(), "Sam", 2),
         )
 
         d = to_dict(opt)
-        from_dict(Reflected.Composite, d)
+        @test from_dict(Composite, d) == opt
 
-        opt = Reflected.Composite(
-            Reflected.OptionB(Reflect(), "Sam"),
+        opt = Composite(
+            OptionB(Reflect(), "Sam"),
         )
         d = to_dict(opt)
-        from_dict(Reflected.Composite, d)
+        @test from_dict(Composite, d) == opt
 
-        opt = Reflected.Composite(
-            Reflected.OptionC(Reflect(), "Sam"),
+        opt = Composite(
+            OptionC(Reflect(), "Sam"),
         )
         d = to_dict(opt)
-        from_dict(Reflected.Composite, d)
+        @test from_dict(Composite, d) == opt
 
         d = Dict(
             "person" => Dict{String, Any}(

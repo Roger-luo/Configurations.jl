@@ -1,0 +1,226 @@
+"""
+    from_kwargs(convention!, ::Type{T}; kw...) where T
+
+Convert keyword arguments to given option type `T` using `convention!`.
+See also [`from_dict`](@ref).
+
+# Convention
+
+- `from_underscore_kwargs!`: use `_` to disambiguate subfields of the same name, this is the default behaviour.
+- `from_field_kwargs!`: do not disambiguate subfields, errors if there are disambiguity
+"""
+function from_kwargs(convention!, ::Type{T}; kw...) where T
+    d = OrderedDict{String, Any}()
+    convention!(d, T; kw...)
+    return from_dict(T, d)
+end
+
+"""
+    from_kwargs(::Type{T}; kw...) where T
+
+Convert keyword arguments to given option type `T` using the underscore convention.
+"""
+from_kwargs(::Type{T}; kw...) where T = from_underscore_kwargs(T; kw...)
+
+"""
+    from_underscore_kwargs(::Type{T}; kw...) where T
+
+Convert keyword arguments to given option type `T` using the underscore convention.
+"""
+from_underscore_kwargs(::Type{T}; kw...) where T = from_kwargs(from_underscore_kwargs!, T; kw...)
+
+"""
+    from_field_kwargs(::Type{T}; kw...) where T
+
+Convert keyword arguments to given option type `T` using the field keyword convention.
+"""
+from_field_kwargs(::Type{T}; kw...) where T = from_kwargs(from_field_kwargs!, T; kw...)
+
+# NOTE: this is for compatibilty
+"""
+    from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} = nothing; kw...) where T
+
+Internal method for inserting keyword arguments to given dictionary object `d`. It will overwrite
+existing keys in `d` if it is specified by keyword argument.
+"""
+function from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} = nothing; kw...) where T
+    return from_underscore_kwargs!(d, T, prefix; kw...)
+end
+
+function from_underscore_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} = nothing; kw...) where T
+    validate_keywords(T, underscore_keywords(T); kw...)
+    unsafe_from_underscore_kwargs!(d, T, prefix; kw...)
+end
+
+function unsafe_from_underscore_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} = nothing; kw...) where T
+    return foreach_keywords!(d, T) do name, type
+        key = underscore(prefix, name)
+
+        from_kwargs_option_key!(d, type, name, key, kw) do field_d, field_type
+            unsafe_from_underscore_kwargs!(field_d, field_type, key; kw...)
+        end
+    end
+end
+
+function from_field_kwargs!(d::AbstractDict{String}, ::Type{T}; kw...) where T
+    validate_keywords(T, field_keywords(T); kw...)
+    unsafe_from_field_kwargs!(d, T; kw...)
+end
+
+function unsafe_from_field_kwargs!(d::AbstractDict{String}, ::Type{T}; kw...) where T
+    return foreach_keywords!(d, T) do name, type
+        from_kwargs_option_key!(d, type, name, name, kw) do field_d, field_type
+            unsafe_from_field_kwargs!(field_d, field_type; kw...)
+        end
+    end
+end
+
+function from_kwargs_option_key!(f, d::AbstractDict, ::Type{T}, name::Symbol, key::Symbol, kw) where T
+    key_str = string(key)
+    name_str = string(name)
+    # shortcut
+    if haskey(kw, key)
+        d[name_str] = kw[key]
+        return d
+    end
+    
+    if is_option(T)
+        field_d = OrderedDict{String, Any}()
+        if haskey(d, name_str) && (d_value = d[name_str]) isa AbstractDict
+            field_d = merge!(field_d, d_value)
+        end
+
+        f(field_d, T) # recurse into subfields
+        if !isempty(field_d)
+            d[name_str] = field_d
+        end
+    elseif T isa Union
+        from_kwargs_option_key!(f, d, T.a, name, key, kw)
+        from_kwargs_option_key!(f, d, T.b, name, key, kw)
+    end
+    return d
+end
+
+struct InvalidKeyError <: Exception
+    got::Symbol
+    keys::Vector{Symbol}
+end
+
+function Base.showerror(io::IO, err::InvalidKeyError)
+    print(io, "invalid key ")
+    printstyled(io, err.got; color=:light_blue)
+    print(io, ", possible keys are: ")
+
+    if length(err.keys) > 8
+        for idx in 1:8
+            printstyled(io, err.keys[idx]; color=:light_blue)
+            if idx != 8
+                print(io, ", ")
+            end
+        end
+        print(io, "... please check documentation for other valid keys")
+    else
+        for idx in eachindex(err.keys)
+            printstyled(io, err.keys[idx]; color=:light_blue)
+            if idx != lastindex(err.keys)
+                print(io, ", ")
+            end
+        end
+    end
+    return
+end
+
+function validate_keywords(::Type{T}, keys = underscore_keywords(T); kw...) where T
+    for (k, v) in kw
+        k in keys || throw(InvalidKeyError(k, keys))
+    end
+    return
+end
+
+"""
+    field_keywords(::Type{T}) where T
+
+Return all the option type field names given `T`, error if there are duplicated sub-fields.
+"""
+function field_keywords(::Type{T}) where T
+    return collect_field_keywords!(Symbol[], T, T)
+end
+
+"""
+    underscore_keywords(::Type{T}) where T
+
+Return keywords given `T` using the underscore convention.
+"""
+function underscore_keywords(::Type{T}) where T
+    return collect_underscore_keywords!(Symbol[], T)
+end
+
+function foreach_keywords!(f, list, ::Type{T}) where T
+    is_option(T) || return list
+
+    for name in fieldnames(T)
+        type = fieldtype(T, name)
+        f(name, type)
+    end
+    return list
+end
+
+function underscore(prefix::Maybe{Symbol}, name)
+    if prefix === nothing
+        return name
+    else
+        return Symbol(prefix, :_, name)
+    end
+end
+
+"""
+    DuplicatedFieldError(name, type)
+
+A field with `name` of given option `type` is duplicated in the subfields option type.
+Thus one cannot use the field keyword convention when seeing this error.
+"""
+struct DuplicatedFieldError <: Exception
+    name::Symbol
+    type
+end
+
+function Base.show(io::IO, err::DuplicatedFieldError)
+    print(io, "duplicated field ")
+    printstyled(io, err.name; color=:light_blue)
+    print(io, " in type ")
+    printstyled(io, err.type; color=:green)
+    print(io, " and its sub-fields")
+end
+
+function collect_field_keywords!(list::Vector{Symbol}, ::Type{Top}, ::Type{T}) where {Top, T}
+    return foreach_keywords!(list, T) do name, type
+        if is_option(type)
+            collect_field_keywords!(list, Top, type)
+        elseif type isa Union
+            name in list && error(msg)
+            push!(list, name)
+            # recurse into Union
+            collect_field_keywords!(list, Top, type.a)
+            collect_field_keywords!(list, Top, type.b)
+        else
+            name in list && throw(DuplicatedFieldError(name, Top))
+            push!(list, name)
+        end
+    end
+end
+
+function collect_underscore_keywords!(list::Vector{Symbol}, ::Type{T}, prefix::Maybe{Symbol} = nothing) where T
+    return foreach_keywords!(list, T) do name, type
+        key = underscore(prefix, name)
+
+        if is_option(type)
+            collect_underscore_keywords!(list, type, key)
+        elseif type isa Union
+            push!(list, key)
+            collect_underscore_keywords!(list, type.a, key)
+            collect_underscore_keywords!(list, type.b, key)
+        else
+            push!(list, key)
+        end
+    end
+end

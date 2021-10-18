@@ -37,13 +37,17 @@ export no_default,
     end
 end
 
+include("errors.jl")
 include("types.jl")
 include("convert.jl")
 include("reflection.jl")
 include("utils.jl")
-include("parse.jl")
 include("codegen.jl")
 
+include("from_dict.jl")
+include("from_kwargs.jl")
+include("from_toml.jl")
+# include("parse.jl")
 include("serialize.jl")
 
 
