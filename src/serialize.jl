@@ -119,10 +119,17 @@ to_dict(::Type, x) = x
 
 # handle list of options as builtin
 function to_dict(::Type{T}, x::Vector, option::ToDictOption) where T
-    if is_option(eltype(x))
-        return map(p->to_dict(T, p, option), x)
-    else
-        return x
+    return map(x) do each
+        d = to_dict(T, each, option)
+        if eltype(x) isa Union && is_option(each)
+            FieldType = typeof(each)
+            alias = type_alias(FieldType)
+            idx = find_relfect_field(FieldType)
+            if alias !== nothing && idx === nothing
+                return OrderedDict{String, Any}(alias => d)
+            end
+        end
+        return d
     end
 end
 
@@ -179,35 +186,6 @@ function _option_to_dict(x, option::ToDictOption)
         end
     end
     return d
-end
-
-# NOTE: copied from JLD
-# https://github.com/JuliaIO/JLD.jl/blob/83ea0c5ef7293c78d7d9c8ffdf9ede599b54dc4c/src/JLD00.jl#L991
-# we only have DataType to serialize
-function full_typename(jltype::DataType)
-    tname = string(jltype.name.module, ".", jltype.name.name)
-    if isempty(jltype.parameters)
-        return tname
-    else
-        params_str = join([full_typename(x) for x in jltype.parameters], ",")
-        return string(tname, "{", params_str, "}")
-    end
-end
-
-function contains_reflect_type(::Type{T}) where T
-    for idx in 1:fieldcount(T)
-        Reflect === fieldtype(T, idx) && return true
-    end
-    return false
-end
-
-function is_union_of_multiple_options(::Type{T}) where T
-    T isa Union || return false
-    T.a === Nothing && return is_union_of_multiple_options(T.b)
-    T.b === Nothing && return is_union_of_multiple_options(T.a)
-    
-    # not option type
-    return is_option_maybe(T.a) && is_option_maybe(T.b)
 end
 
 """
