@@ -25,8 +25,12 @@ function compare_options(a::A, b::A) where {A}
     return true
 end
 
-function tryparse_jltype(s)
+function tryparse_jltype(s, alias_map=nothing)
     s isa String || throw(ArgumentError("expect type String, got: $(typeof(s))"))
+    if alias_map !== nothing
+        haskey(alias_map, s) && return alias_map[s]
+    end
+
     type_ex = Meta.parse(s)
     is_datatype_expr(type_ex) || throw(ArgumentError("expect type expression got: $type_ex"))
     try
@@ -36,8 +40,8 @@ function tryparse_jltype(s)
     end
 end
 
-function parse_jltype(s)
-    type = tryparse_jltype(s)
+function parse_jltype(s, alias_map=nothing)
+    type = tryparse_jltype(s, alias_map)
     type === nothing && throw(ArgumentError("cannot parse $s to a Julia type"))
     return type
 end

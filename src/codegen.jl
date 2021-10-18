@@ -114,6 +114,7 @@ function codegen_option_type(def::JLKwStruct)
         $(codegen_field_default(def))
         $(codegen_type_alias(def))
         $(codegen_isequal(def))
+        $(codegen_from_dict_specialize(def))
         nothing
     end
 end
@@ -311,4 +312,12 @@ Generate [`Configurations.create`](@ref) overload.
 """
 function codegen_create(def::JLKwStruct)
     codegen_ast_kwfn(def, :($Configurations.create))
+end
+
+function codegen_from_dict_specialize(def::JLKwStruct)
+    quote
+        @generated function Configurations.from_dict_specialize(::Type{T}, d::AbstractDict{String}) where {T <: $(def.name)}
+            Configurations.from_dict_generated(T, :d)
+        end
+    end
 end
