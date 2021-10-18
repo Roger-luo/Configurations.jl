@@ -107,7 +107,6 @@ function from_dict_union_type(::Type{OptionType}, f_name::Symbol, ::Type{FieldTy
         if is_option(T)
             alias = type_alias(T)
             reflect_idx = find_relfect_field(T)
-
             # type can be determined by alias
             if haskey(value, alias)
                 return from_dict_dynamic(T, value[alias])
@@ -125,15 +124,15 @@ function from_dict_union_type(::Type{OptionType}, f_name::Symbol, ::Type{FieldTy
                     end
                 end
                 continue
-            else
-                continue
             end
 
-            # not much information, try parse
-            try
-                return from_dict_dynamic(T, value)
-            catch
-                continue
+            if alias === nothing && reflect_idx === nothing
+                # not much information, try parse
+                try
+                    return from_dict_dynamic(T, value)
+                catch
+                    continue
+                end
             end
         else
             try
