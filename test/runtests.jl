@@ -83,10 +83,10 @@ end
 
 @testset "printing" begin
     println(PartialDefault(x->x+1, [:x], :(x+1)))
-    println(InvalidKeyError(:name, [:a, :b, :c, :d]))
-    println(InvalidKeyError(:name, [Symbol(:a, idx) for idx in 1:10]))
-    println(DuplicatedFieldError(:name, OptionA))
-    println(DuplicatedAliasError("alias"))
+    showerror(stdout, InvalidKeyError(:name, [:a, :b, :c, :d]))
+    showerror(stdout, InvalidKeyError(:name, [Symbol(:a, idx) for idx in 1:10]))
+    showerror(stdout, DuplicatedFieldError(:name, OptionA))
+    showerror(stdout, DuplicatedAliasError("alias"))
 end
 
 @testset "options" begin
