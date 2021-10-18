@@ -223,34 +223,12 @@ function from_dict_generated(::Type{OptionType}, value) where {OptionType}
         if f_default === nothing
             push!(ret.args, quote
                 if $field_value isa AbstractDict && isempty($field_value)
-                    return nothing
+                    $var = nothing
                 end
             end)
         end
 
-        body = if is_option(f_type)
-            from_dict_option_type_generated(OptionType, f_name, f_type, field_value)
-        elseif f_type isa Union
-            from_dict_union_type_generated(OptionType, f_name, f_type, field_value)
-        elseif f_type <: Reflect
-            msg = "type mismatch, expect $OptionType got"
-            alias = type_alias(OptionType)
-            if alias === nothing
-                quote
-                    Configurations.parse_jltype($field_value) <: $OptionType ||
-                        throw(ArgumentError(msg * " $($field_value)"))
-                    Reflect()
-                end
-            else
-                quote
-                    $field_value == $alias || Configurations.parse_jltype($field_value) <: $OptionType ||
-                        throw(ArgumentError(msg * " $($field_value)"))
-                    Reflect()
-                end
-            end
-        else
-            from_dict_other_type_generated(OptionType, f_name, f_type, field_value)
-        end
+        body = from_dict_field_type_generated(OptionType, f_name, f_type, field_value)
 
         push!(ret.args, quote
             $var = $body
@@ -258,6 +236,34 @@ function from_dict_generated(::Type{OptionType}, value) where {OptionType}
     end
     push!(ret.args, construct)
     return ret
+end
+
+function from_dict_field_type_generated(option_type, f_name, f_type, field_value)
+    if is_option(f_type)
+        from_dict_option_type_generated(option_type, f_name, f_type, field_value)
+    elseif Nothing <: f_type
+        from_dict_maybe_type_generated(option_type, f_name, f_type, field_value)
+    elseif f_type isa Union
+        from_dict_union_type_generated(option_type, f_name, f_type, field_value)
+    elseif f_type <: Reflect # check if the reflect value match current type
+        msg = "type mismatch, expect $option_type got"
+        alias = type_alias(option_type)
+        if alias === nothing
+            quote
+                $Configurations.parse_jltype($field_value) <: $option_type ||
+                    throw(ArgumentError(msg * " $($field_value)"))
+                Reflect()
+            end
+        else
+            quote
+                $field_value == $alias || $Configurations.parse_jltype($field_value) <: $option_type ||
+                    throw(ArgumentError(msg * " $($field_value)"))
+                Reflect()
+            end
+        end
+    else
+        from_dict_other_type_generated(option_type, f_name, f_type, field_value)
+    end
 end
 
 function from_dict_option_type_generated(::Type{OptionType}, f_name::Symbol, f_type::Type, value) where {OptionType}
@@ -275,22 +281,54 @@ end
 
 function from_dict_union_type_generated(::Type{OptionType}, f_name::Symbol, f_type::Type, value) where {OptionType}
     types = Base.uniontypes(f_type)
-    @gensym type
+    return _from_dict_union_type_generated(OptionType, f_name, f_type, types, value)
+end
 
+function _from_dict_union_type_generated(::Type{OptionType}, f_name::Symbol, f_type::Type, types, value) where {OptionType}
     if has_same_reflect_field(types)
-        T = first(types)
-        f_alias_map = alias_map(types)
-        f_alias_map = isempty(f_alias_map) ? nothing : f_alias_map
-        idx = find_reflect_field(T)
-        reflect_key = string(fieldname(T, idx))
-        msg = "expect key: $reflect_key"
-
+        _from_dict_union_type_similar_reflect_field(f_name, types, value)
+    else # fallback to dynamic
         return quote
-            haskey($value, $reflect_key) || error($msg)
-            $type = $Configurations.parse_jltype($value[$reflect_key], $f_alias_map)
-            $Configurations.from_dict_specialize($type, $value)
+            $from_dict_union_type($OptionType, $(QuoteNode(f_name)), $f_type, $value)
         end
-    else
+    end
+end
+
+function from_dict_maybe_type_generated(option_type, f_name::Symbol, f_type, value)
+    types = filter(x -> x !== Nothing, Base.uniontypes(f_type))
+
+    if length(types) == 1 # Maybe{T}
+        return quote
+            if $value === nothing
+                nothing
+            else
+                $(from_dict_field_type_generated(option_type, f_name, types[1], value))
+            end
+        end
+    else # Maybe{Union{A, B, C...}}
+        return quote
+            if $value === nothing
+                nothing
+            else
+                $(_from_dict_union_type_generated(option_type, f_name, f_type, types, value))
+            end
+        end
+    end
+end
+
+function _from_dict_union_type_similar_reflect_field(f_name::Symbol, types, value)
+    T = first(types)
+    f_alias_map = alias_map(types)
+    f_alias_map = isempty(f_alias_map) ? nothing : f_alias_map
+    idx = find_reflect_field(T)
+    reflect_key = string(fieldname(T, idx))
+    msg = "expect key: $reflect_key"
+
+    @gensym type
+    return quote
+        haskey($value, $reflect_key) || error($msg)
+        $type = $Configurations.parse_jltype($value[$reflect_key], $f_alias_map)
+        $Configurations.from_dict_specialize($type, $value)
     end
 end
 
