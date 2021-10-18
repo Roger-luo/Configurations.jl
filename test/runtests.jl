@@ -83,10 +83,10 @@ end
 
 @testset "printing" begin
     println(PartialDefault(x->x+1, [:x], :(x+1)))
-    println(InvalidKeyError(:name, [:a, :b, :c, :d]))
-    println(InvalidKeyError(:name, [Symbol(:a, idx) for idx in 1:10]))
-    println(DuplicatedFieldError(:name, OptionA))
-    println(DuplicatedAliasError("alias"))
+    showerror(stdout, InvalidKeyError(:name, [:a, :b, :c, :d]))
+    showerror(stdout, InvalidKeyError(:name, [Symbol(:a, idx) for idx in 1:10]))
+    showerror(stdout, DuplicatedFieldError(:name, OptionA))
+    showerror(stdout, DuplicatedAliasError("alias"))
 end
 
 @testset "options" begin
@@ -217,6 +217,10 @@ end
     list::Vector{Int}
 end
 
+@option struct VectorOfUnions
+    list::Vector{Union{OptionA, OptionB}}
+end
+
 @testset "vector of options" begin
     d = Dict{String, Any}(
         "options" => [
@@ -251,6 +255,47 @@ end
     to_dict(VectorOfNumbers([1, 2, 3]); include_defaults=false) == OrderedDict{String, Any}(
         "list" => [1, 2, 3]
     )
+
+    d = Dict{String, Any}(
+        "list" => [
+            Dict{String, Any}(
+                "option_a" => Dict{String, Any}(
+                    "name" => "A",
+                    "int" => 1,
+                ),
+            ),
+            Dict{String, Any}(
+                "option_a" => Dict{String, Any}(
+                    "name" => "B",
+                    "int" => 2,
+                ),
+            ),
+            Dict{String, Any}(
+                "option_b" => Dict{String, Any}(
+                    "opt" => Dict{String, Any}(
+                        "name" => "Sam",
+                        "int" => 1,
+                    ),
+                    "float" => 0.3,
+                ),
+            )
+        ]
+    )
+
+    @test from_dict(VectorOfUnions, d) == VectorOfUnions(
+        Union{OptionA, OptionB}[
+            OptionA("A", 1),
+            OptionA("B", 2),
+            OptionB(OptionA("Sam", 1), 0.3)
+        ]
+    )
+
+    opt = VectorOfUnions([
+        OptionA("A", 1),
+        OptionA("B", 2),
+        OptionB(),
+    ])
+    @test from_dict(VectorOfUnions, to_dict(opt)) == opt
 end
 
 @option struct LongValidateErrorHint

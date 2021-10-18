@@ -37,6 +37,10 @@ end
     person::Union{OptionA, OptionB, OptionC, OptionE}
 end
 
+@option struct VectorOfUnion
+    data::Vector{Union{OptionA, OptionB}}
+end
+
 @testset "Reflect Type" begin
     @testset "OptionA" begin
         opt = OptionA(Reflect(), "Sam", 2)
@@ -119,7 +123,52 @@ end
         )
         @test from_dict(Reflected.Composite, d) == opt
     end
+
+    @testset "vector of union" begin
+        d = Dict{String, Any}(
+            "data" => [
+                Dict{String, Any}(
+                    "type" => "Main.Reflected.OptionA",
+                    "name" => "A",
+                    "age"  => 1,
+                ),
+                Dict{String, Any}(
+                    "type" => "Main.Reflected.OptionA",
+                    "name" => "B",
+                    "age"  => 2,
+                ),
+                Dict{String, Any}(
+                    "type" => "Main.Reflected.OptionB",
+                    "name" => "C",
+                ),
+                Dict{String, Any}(
+                    "type" => "Main.Reflected.OptionB",
+                    "name" => "D",
+                ),
+            ]
+        )
+
+        @test from_dict(Reflected.VectorOfUnion, d) == Reflected.VectorOfUnion(
+            Union{Reflected.OptionA, Reflected.OptionB}[
+                Reflected.OptionA(Reflect(), "A", 1),
+                Reflected.OptionA(Reflect(), "B", 2),
+                Reflected.OptionB(Reflect(), "C"),
+                Reflected.OptionB(Reflect(), "D")
+            ]
+        )
+
+        opt = Reflected.VectorOfUnion(;
+            data=[
+                Reflected.OptionA(;name="A", age=1),
+                Reflected.OptionA(;name="B", age=2),
+                Reflected.OptionB(;name="C"),
+                Reflected.OptionB(;name="D"),
+            ]
+        )
+        @test from_dict(Reflected.VectorOfUnion, to_dict(opt)) == opt
+    end
 end
 
 
 end # Reflected
+

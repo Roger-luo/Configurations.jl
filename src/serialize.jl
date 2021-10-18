@@ -119,10 +119,17 @@ to_dict(::Type, x) = x
 
 # handle list of options as builtin
 function to_dict(::Type{T}, x::Vector, option::ToDictOption) where T
-    if is_option(eltype(x))
-        return map(p->to_dict(T, p, option), x)
-    else
-        return x
+    return map(x) do each
+        d = to_dict(T, each, option)
+        if eltype(x) isa Union && is_option(each)
+            FieldType = typeof(each)
+            alias = type_alias(FieldType)
+            idx = find_relfect_field(FieldType)
+            if alias !== nothing && idx === nothing
+                return OrderedDict{String, Any}(alias => d)
+            end
+        end
+        return d
     end
 end
 

@@ -50,21 +50,3 @@ ERROR: expect a Symbol, got String
 """
 convert_to_option(::Type, ::Type{T}, x) where T = convert_to_option(T, x)
 convert_to_option(::Type{T}, x) where T = ConvertNotFound()
-
-# built-in type conversion support
-convert_to_option(::Type{VersionNumber}, x) = VersionNumber(x)
-
-function convert_union_to_option(::Type{T}, ::Type{A}, x) where {T, A}
-    if A isa Union
-        value = convert_to_option(T, A.a, x)
-
-        if value isa ConvertNotFound
-            value = convert_to_option(T, A.b, x)
-        end
-    else
-        value = convert_to_option(T, A, x)
-    end
-
-    value isa ConvertNotFound && return convert(A, x)
-    return value
-end

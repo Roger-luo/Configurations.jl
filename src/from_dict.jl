@@ -34,8 +34,24 @@ end
 struct OptionField{name} end
 OptionField(name::Symbol) = OptionField{name}()
 
-function from_dict(::Type{OptionType}, of::OptionField{field}, ::Type{T}, x) where {OptionType, field, T}
+function from_dict(::Type{OptionType}, ::OptionField, ::Type{T}, x) where {OptionType, T}
     return from_dict(OptionType, T, x)
+end
+
+function from_dict(::Type{OptionType}, ::OptionField{field}, ::Type{T}, x) where {OptionType, field, T <: AbstractVector}
+    if eltype(T) isa Union
+        return map(x) do each
+            from_dict_union_type(OptionType, field, eltype(T), each)
+        end
+    elseif is_option(eltype(T))
+        return map(x) do each
+            from_dict_option_type(OptionType, field, eltype(T), each)
+        end
+    else
+        return map(x) do each
+            from_dict_other_type(OptionType, field, eltype(T), each)
+        end
+    end
 end
 
 function from_dict(::Type{OptionType}, ::Type{T}, x) where {OptionType, T}
@@ -46,6 +62,8 @@ function from_dict(::Type{OptionType}, ::Type{T}, x) where {OptionType, T}
     return deprecated_conversion(OptionType, T, x)
     # return convert(T, x)
 end
+
+from_dict(::Type, ::Type{VersionNumber}, x) = VersionNumber(x)
 
 function deprecated_conversion(::Type{OptionType}, ::Type{T}, x) where {OptionType, T}
     ret = convert_to_option(OptionType, T, x)
