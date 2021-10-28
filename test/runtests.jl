@@ -1,3 +1,4 @@
+include("test_utils.jl")
 include("test_basic.jl")
 include("test_from_dict.jl")
 include("test_reflection.jl")
