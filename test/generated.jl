@@ -39,6 +39,11 @@ using Configurations
 using Configurations: from_dict_specialize, from_dict_generated
 
 d = Dict{String, Any}("data" => Dict{String, Any}("type" => "Main.SameReflect.OptionA"))
+from_dict(SameReflect.Composite, d)
+
+d = Dict{String, Any}("data" => Dict{String, Any}("type" => "Main.SameReflect.OptionB"))
+from_dict(SameReflect.Composite, d)
+
 @time from_dict(SameReflect.Composite, d)
 
 @time from_dict_specialize(SameReflect.Composite, d)

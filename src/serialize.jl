@@ -124,7 +124,7 @@ function to_dict(::Type{T}, x::Vector, option::ToDictOption) where T
         if eltype(x) isa Union && is_option(each)
             FieldType = typeof(each)
             alias = type_alias(FieldType)
-            idx = find_relfect_field(FieldType)
+            idx = find_reflect_field(FieldType)
             if alias !== nothing && idx === nothing
                 return OrderedDict{String, Any}(alias => d)
             end

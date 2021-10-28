@@ -25,10 +25,11 @@ OptionA(;
 ```
 """
 function from_dict(::Type{OptionType}, d::AbstractDict{String}; kw...) where {OptionType}
+    isconcretetype(OptionType) || throw(ArgumentError("expect a concrete type, got $OptionType"))
     if !isempty(kw)
         d = from_underscore_kwargs!(deepcopy(d), OptionType; kw...)
     end
-    return from_dict_dynamic(OptionType, d)
+    return from_dict_specialize(OptionType, d)
 end
 
 struct OptionField{name} end
@@ -127,18 +128,18 @@ function from_dict_union_type(::Type{OptionType}, f_name::Symbol, ::Type{FieldTy
             reflect_idx = find_reflect_field(T)
             # type can be determined by alias
             if haskey(value, alias)
-                return from_dict_dynamic(T, value[alias])
+                return from_dict(T, value[alias])
             elseif reflect_idx !== nothing # type can be determined by reflect field
                 reflect_f_name = fieldname(T, reflect_idx)
                 reflect_key = string(reflect_f_name)
                 if haskey(value, reflect_key)
                     if alias == value[reflect_key] # find alias in reflect
-                        return from_dict_dynamic(T, value)
+                        return from_dict(T, value)
                     else
                         type = tryparse_jltype(value[reflect_key])
                         type === nothing && continue
                         # NOTE: type is always more specialized
-                        type <: T && return from_dict_dynamic(type, value)
+                        type <: T && return from_dict(type, value)
                     end
                 end
                 continue
@@ -147,7 +148,7 @@ function from_dict_union_type(::Type{OptionType}, f_name::Symbol, ::Type{FieldTy
             if alias === nothing && reflect_idx === nothing
                 # not much information, try parse
                 try
-                    return from_dict_dynamic(T, value)
+                    return from_dict(T, value)
                 catch
                     continue
                 end
@@ -205,34 +206,32 @@ function from_dict_generated(::Type{OptionType}, value) where {OptionType}
         field_value = gensym(:field_value)
         push!(construct.args, var)
 
-        if f_default === no_default
-            push!(ret.args, quote
-                if !haskey($value, $key)
-                    error("expect key: $key")
-                end
-            end)
-        else
-            push!(ret.args, quote
-                if !haskey($value, $key)
-                    $var = $f_default
-                end
-            end)
-        end
-        push!(ret.args, :($field_value = $value[$key]))
+        jl = JLIfElse()
 
-        if f_default === nothing
-            push!(ret.args, quote
-                if $field_value isa AbstractDict && isempty($field_value)
-                    $var = nothing
-                end
-            end)
+        if f_default === no_default
+            jl[:(!haskey($value, $key))] = :(error("expect key: $key"))
+        else
+            jl[:(!haskey($value, $key))] = :($var = $f_default)
         end
 
         body = from_dict_field_type_generated(OptionType, f_name, f_type, field_value)
+        if f_default === nothing
+            jl.otherwise = quote
+                $field_value = $value[$key]
+                if $field_value isa AbstractDict && isempty($field_value)
+                    $var = nothing
+                else
+                    $var = $body
+                end
+            end
+        else
+            jl.otherwise = quote
+                $field_value = $value[$key]
+                $var = $body
+            end
+        end
 
-        push!(ret.args, quote
-            $var = $body
-        end)
+        push!(ret.args, codegen_ast(jl))
     end
     push!(ret.args, construct)
     return ret
@@ -251,13 +250,13 @@ function from_dict_field_type_generated(option_type, f_name, f_type, field_value
         if alias === nothing
             quote
                 $Configurations.parse_jltype($field_value) <: $option_type ||
-                    throw(ArgumentError(msg * " $($field_value)"))
+                    throw(ArgumentError($msg * " $($field_value)"))
                 Reflect()
             end
         else
             quote
                 $field_value == $alias || $Configurations.parse_jltype($field_value) <: $option_type ||
-                    throw(ArgumentError(msg * " $($field_value)"))
+                    throw(ArgumentError($msg * " $($field_value)"))
                 Reflect()
             end
         end
@@ -269,13 +268,15 @@ end
 function from_dict_option_type_generated(::Type{OptionType}, f_name::Symbol, f_type::Type, value) where {OptionType}
     quote
         $value isa AbstractDict || error("expect an AbstractDict, got $(typeof($value))")
-        $(from_dict_generated(f_type, value))
-    end    
+        # NOTE: we want to allow user overloaded from_dict here
+        # thus we don't use $(from_dict_generated(f_type, value))
+        $Configurations.from_dict($f_type, $value)
+    end
 end
 
 function from_dict_other_type_generated(::Type{OptionType}, f_name::Symbol, f_type::Type, value) where {OptionType}
     quote
-        from_dict($OptionType, $(OptionField(f_name)), $f_type, $value)
+        $Configurations.from_dict($OptionType, $(OptionField(f_name)), $f_type, $value)
     end
 end
 
