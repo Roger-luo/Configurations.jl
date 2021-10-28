@@ -19,6 +19,8 @@ jobs:
         package:
           - {user: fonsp, repo: Pluto.jl, group: All}
           - {user: comonicon, repo: Comonicon.jl, group: All}
+          - {user: QuantumBFS, repo: IBMQClient.jl, group: All}
+          - {user: QuantumBFS, repo: AWSBraket.jl, group: All}
 
     steps:
       - uses: actions/checkout@v2
