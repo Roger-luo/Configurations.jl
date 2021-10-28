@@ -39,22 +39,19 @@ function from_dict(::Type{OptionType}, ::OptionField, ::Type{T}, x) where {Optio
     return from_dict(OptionType, T, x)
 end
 
-function from_dict(::Type{OptionType}, ::OptionField{field}, ::Type{T}, x) where {OptionType, field, T <: AbstractVector}
+function from_dict(::Type{OptionType}, of::OptionField, ::Type{T}, x) where {OptionType, T <: AbstractVector}
     if eltype(T) isa Union
         return map(x) do each
-            from_dict_union_type(OptionType, field, eltype(T), each)
-        end
-    elseif is_option(eltype(T))
-        return map(x) do each
-            from_dict_option_type(OptionType, field, eltype(T), each)
+            from_dict_union_type(OptionType, of, eltype(T), each)
         end
     else
         return map(x) do each
-            from_dict_other_type(OptionType, field, eltype(T), each)
+            from_dict(OptionType, of, eltype(T), each)
         end
     end
 end
 
+# default conversions
 function from_dict(::Type{OptionType}, ::Type{T}, x) where {OptionType, T}
     is_option(T) && return from_dict(T, x)
     # TODO: deprecate convert_to_option
@@ -75,51 +72,51 @@ function deprecated_conversion(::Type{OptionType}, ::Type{T}, x) where {OptionTy
     end
 end
 
-function from_dict_dynamic(::Type{OptionType}, d::AbstractDict{String}) where {OptionType}
-    isconcretetype(OptionType) || throw(ArgumentError("expect concrete type, got $OptionType"))
+# function from_dict_dynamic(::Type{OptionType}, d::AbstractDict{String}) where {OptionType}
+#     isconcretetype(OptionType) || throw(ArgumentError("expect concrete type, got $OptionType"))
 
-    nf = fieldcount(OptionType)
-    args = ntuple(nf) do f_idx
-        f_name = fieldname(OptionType, f_idx)
-        f_type = fieldtype(OptionType, f_idx)
-        f_default = field_default(OptionType, f_name)
-        key = string(f_name)
-        if !haskey(d, key)
-            f_default === no_default && error("expect key: $key")
-            return f_default
-        end
+#     nf = fieldcount(OptionType)
+#     args = ntuple(nf) do f_idx
+#         f_name = fieldname(OptionType, f_idx)
+#         f_type = fieldtype(OptionType, f_idx)
+#         f_default = field_default(OptionType, f_name)
+#         key = string(f_name)
+#         if !haskey(d, key)
+#             f_default === no_default && error("expect key: $key")
+#             return f_default
+#         end
 
-        value = d[key]
-        # empty dict is treated as nothing
-        if value isa AbstractDict && isempty(value) && f_default === nothing
-            return nothing
-        end
+#         value = d[key]
+#         # empty dict is treated as nothing
+#         if value isa AbstractDict && isempty(value) && f_default === nothing
+#             return nothing
+#         end
 
-        return if is_option(f_type)
-            from_dict_option_type(OptionType, f_name, f_type, value)
-        elseif f_type isa Union
-            from_dict_union_type(OptionType, f_name, f_type, value)
-        elseif f_type <: Reflect
-            type_alias(OptionType) == value || parse_jltype(value) <: OptionType ||
-                throw(ArgumentError("type mismatch, expect $OptionType got $value"))
-            Reflect()
-        else
-            from_dict_other_type(OptionType, f_name, f_type, value)
-        end
-    end
-    return OptionType(args...)
-end
+#         return if is_option(f_type)
+#             from_dict_option_type(OptionType, f_name, f_type, value)
+#         elseif f_type isa Union
+#             from_dict_union_type(OptionType, f_name, f_type, value)
+#         elseif f_type <: Reflect
+#             type_alias(OptionType) == value || parse_jltype(value) <: OptionType ||
+#                 throw(ArgumentError("type mismatch, expect $OptionType got $value"))
+#             Reflect()
+#         else
+#             from_dict_other_type(OptionType, f_name, f_type, value)
+#         end
+#     end
+#     return OptionType(args...)
+# end
 
-function from_dict_option_type(::Type{OptionType}, f_name::Symbol, ::Type{T}, value) where {OptionType, T}
-    value isa AbstractDict || error("expect an AbstractDict, got $(typeof(value))")
-    return from_dict_dynamic(T, value)
-end
+# function from_dict_option_type(::Type{OptionType}, f_name::Symbol, ::Type{T}, value) where {OptionType, T}
+#     value isa AbstractDict || error("expect an AbstractDict, got $(typeof(value))")
+#     return from_dict_dynamic(T, value)
+# end
 
-function from_dict_other_type(::Type{OptionType}, f_name::Symbol, ::Type{T}, value) where {OptionType, T}
-    return from_dict(OptionType, OptionField(f_name), T, value)
-end
+# function from_dict_other_type(::Type{OptionType}, f_name::Symbol, ::Type{T}, value) where {OptionType, T}
+#     return from_dict(OptionType, OptionField(f_name), T, value)
+# end
 
-function from_dict_union_type(::Type{OptionType}, f_name::Symbol, ::Type{FieldType}, value) where {OptionType, FieldType}
+function from_dict_union_type(::Type{OptionType}, of::OptionField{f_name}, ::Type{FieldType}, value) where {OptionType, f_name, FieldType}
     assert_duplicated_alias_union(FieldType)
 
     for T in Base.uniontypes(FieldType)
@@ -155,7 +152,7 @@ function from_dict_union_type(::Type{OptionType}, f_name::Symbol, ::Type{FieldTy
             end
         else
             try
-                return from_dict(OptionType, OptionField(f_name), T, value) 
+                return from_dict(OptionType, of, T, value)
             catch
                 continue
             end
@@ -214,7 +211,7 @@ function from_dict_generated(::Type{OptionType}, value) where {OptionType}
             jl[:(!haskey($value, $key))] = :($var = $f_default)
         end
 
-        body = from_dict_field_type_generated(OptionType, f_name, f_type, field_value)
+        body = from_dict_generated(OptionType, OptionField(f_name), f_type, field_value)
         if f_default === nothing
             jl.otherwise = quote
                 $field_value = $value[$key]
@@ -237,13 +234,18 @@ function from_dict_generated(::Type{OptionType}, value) where {OptionType}
     return ret
 end
 
-function from_dict_field_type_generated(option_type, f_name, f_type, field_value)
+function from_dict_generated(option_type, of::OptionField, f_type, field_value)
     if is_option(f_type)
-        from_dict_option_type_generated(option_type, f_name, f_type, field_value)
-    elseif Nothing <: f_type
-        from_dict_maybe_type_generated(option_type, f_name, f_type, field_value)
+        quote
+            $field_value isa AbstractDict ||
+                error("expect an AbstractDict, got $(typeof($field_value))")
+            # NOTE: we want to allow user overloaded from_dict here
+            # thus we don't use $(from_dict_generated(f_type, value))
+            $Configurations.from_dict($f_type, $field_value)
+        end
     elseif f_type isa Union
-        from_dict_union_type_generated(option_type, f_name, f_type, field_value)
+        types = Base.uniontypes(f_type)
+        from_dict_union_type_generated(option_type, of, types, field_value)
     elseif f_type <: Reflect # check if the reflect value match current type
         msg = "type mismatch, expect $option_type got"
         alias = type_alias(option_type)
@@ -261,49 +263,33 @@ function from_dict_field_type_generated(option_type, f_name, f_type, field_value
             end
         end
     else
-        from_dict_other_type_generated(option_type, f_name, f_type, field_value)
-    end
-end
-
-function from_dict_option_type_generated(::Type{OptionType}, f_name::Symbol, f_type::Type, value) where {OptionType}
-    quote
-        $value isa AbstractDict || error("expect an AbstractDict, got $(typeof($value))")
-        # NOTE: we want to allow user overloaded from_dict here
-        # thus we don't use $(from_dict_generated(f_type, value))
-        $Configurations.from_dict($f_type, $value)
-    end
-end
-
-function from_dict_other_type_generated(::Type{OptionType}, f_name::Symbol, f_type::Type, value) where {OptionType}
-    quote
-        $Configurations.from_dict($OptionType, $(OptionField(f_name)), $f_type, $value)
-    end
-end
-
-function from_dict_union_type_generated(::Type{OptionType}, f_name::Symbol, f_type::Type, value) where {OptionType}
-    types = Base.uniontypes(f_type)
-    return _from_dict_union_type_generated(OptionType, f_name, f_type, types, value)
-end
-
-function _from_dict_union_type_generated(::Type{OptionType}, f_name::Symbol, f_type::Type, types, value) where {OptionType}
-    if has_same_reflect_field(types)
-        _from_dict_union_type_similar_reflect_field(f_name, types, value)
-    else # fallback to dynamic
-        return quote
-            $from_dict_union_type($OptionType, $(QuoteNode(f_name)), $f_type, $value)
+        quote
+            $Configurations.from_dict($option_type, $of, $f_type, $field_value)
         end
     end
 end
 
-function from_dict_maybe_type_generated(option_type, f_name::Symbol, f_type, value)
-    types = filter(x -> x !== Nothing, Base.uniontypes(f_type))
+function from_dict_union_type_generated(option_type, of::OptionField, types::Vector{Any}, value::Symbol)
+    if Nothing in types
+        from_dict_maybe_type_generated(option_type, of, types, value)
+    elseif has_same_reflect_field(types)
+        _from_dict_union_type_similar_reflect_field(types, value)
+    else # fallback to dynamic
+        FieldType = Union{types...}
+        return quote
+            $Configurations.from_dict_union_type($option_type, $of, $FieldType, $value)
+        end
+    end
+end
 
+function from_dict_maybe_type_generated(option_type, of::OptionField, types::Vector{Any}, value)
+    types = filter(x -> x !== Nothing, types)
     if length(types) == 1 # Maybe{T}
         return quote
             if $value === nothing
                 nothing
             else
-                $(from_dict_field_type_generated(option_type, f_name, types[1], value))
+                $(from_dict_generated(option_type, of, types[1], value))
             end
         end
     else # Maybe{Union{A, B, C...}}
@@ -311,13 +297,13 @@ function from_dict_maybe_type_generated(option_type, f_name::Symbol, f_type, val
             if $value === nothing
                 nothing
             else
-                $(_from_dict_union_type_generated(option_type, f_name, f_type, types, value))
+                $(from_dict_union_type_generated(option_type, of, types, value))
             end
         end
     end
 end
 
-function _from_dict_union_type_similar_reflect_field(f_name::Symbol, types, value)
+function _from_dict_union_type_similar_reflect_field(types, value)
     T = first(types)
     f_alias_map = alias_map(types)
     f_alias_map = isempty(f_alias_map) ? nothing : f_alias_map
