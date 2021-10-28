@@ -99,9 +99,19 @@ end
 end
 
 function from_dict_union_type_dynamic(::Type{OptionType}, of::OptionField{f_name}, ::Type{FieldType}, value) where {OptionType, f_name, FieldType}
+    FieldType isa Union || return from_dict(OptionType, of, FieldType, value)
     assert_duplicated_alias_union(FieldType)
 
-    for T in Base.uniontypes(FieldType)
+    types = Base.uniontypes(FieldType)
+    if Nothing in types
+        value === nothing && return # happy path
+        types = filter(x->x!==Nothing, types)
+        if length(types) == 1
+            return from_dict(OptionType, of, types[1], value)
+        end
+    end
+
+    for T in types
         if is_option(T)
             alias = type_alias(T)
             reflect_idx = find_reflect_field(T)

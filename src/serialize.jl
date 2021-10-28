@@ -173,12 +173,13 @@ function _option_to_dict(x, option::ToDictOption)
                     continue
                 end
 
-                if type_alias(typeof(value)) === nothing
+                alias = type_alias(typeof(value))
+                if alias === nothing
                     error("please define an alias for option type $(typeof(value))")
                 end
 
                 d[name_str] = OrderedDict{String, Any}(
-                    type_alias(typeof(value)) => field_dict,
+                    alias => field_dict,
                 )
             else
                 d[name_str] = field_dict
