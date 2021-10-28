@@ -97,8 +97,6 @@ option = Comonicon("foo",
 d = to_dict(option)
 @btime from_dict(Comonicon, d)
 
-using Configurations: from_dict_specialize, from_dict_generated
+using Configurations: from_dict_dynamic, from_dict_specialize, from_dict_generated
 
-@btime from_dict_specialize(Comonicon, d)
-
-from_dict_generated(Comonicon, :d)
+@btime from_dict_dynamic(Comonicon, d)
