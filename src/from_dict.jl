@@ -72,50 +72,6 @@ function deprecated_conversion(::Type{OptionType}, ::Type{T}, x) where {OptionTy
     end
 end
 
-# function from_dict_dynamic(::Type{OptionType}, d::AbstractDict{String}) where {OptionType}
-#     isconcretetype(OptionType) || throw(ArgumentError("expect concrete type, got $OptionType"))
-
-#     nf = fieldcount(OptionType)
-#     args = ntuple(nf) do f_idx
-#         f_name = fieldname(OptionType, f_idx)
-#         f_type = fieldtype(OptionType, f_idx)
-#         f_default = field_default(OptionType, f_name)
-#         key = string(f_name)
-#         if !haskey(d, key)
-#             f_default === no_default && error("expect key: $key")
-#             return f_default
-#         end
-
-#         value = d[key]
-#         # empty dict is treated as nothing
-#         if value isa AbstractDict && isempty(value) && f_default === nothing
-#             return nothing
-#         end
-
-#         return if is_option(f_type)
-#             from_dict_option_type(OptionType, f_name, f_type, value)
-#         elseif f_type isa Union
-#             from_dict_union_type(OptionType, f_name, f_type, value)
-#         elseif f_type <: Reflect
-#             type_alias(OptionType) == value || parse_jltype(value) <: OptionType ||
-#                 throw(ArgumentError("type mismatch, expect $OptionType got $value"))
-#             Reflect()
-#         else
-#             from_dict_other_type(OptionType, f_name, f_type, value)
-#         end
-#     end
-#     return OptionType(args...)
-# end
-
-# function from_dict_option_type(::Type{OptionType}, f_name::Symbol, ::Type{T}, value) where {OptionType, T}
-#     value isa AbstractDict || error("expect an AbstractDict, got $(typeof(value))")
-#     return from_dict_dynamic(T, value)
-# end
-
-# function from_dict_other_type(::Type{OptionType}, f_name::Symbol, ::Type{T}, value) where {OptionType, T}
-#     return from_dict(OptionType, OptionField(f_name), T, value)
-# end
-
 @generated function from_dict_union_type(::Type{OptionType}, ::OptionField{f_name}, ::Type{FieldType}, value) where {OptionType, f_name, FieldType}
     types = Base.uniontypes(FieldType)
     return from_dict_union_type_generated(OptionType, OptionField(f_name), types, :value)
@@ -194,7 +150,7 @@ end
 function from_dict_specialize
 end
 
-function from_dict_generated(::Type{OptionType}, value) where {OptionType}
+function from_dict_generated(::Type{OptionType}, value::Symbol) where {OptionType}
     nf = fieldcount(OptionType)
     ret = Expr(:block)
     construct = Expr(:call, OptionType)
@@ -239,7 +195,7 @@ function from_dict_generated(::Type{OptionType}, value) where {OptionType}
     return ret
 end
 
-function from_dict_generated(option_type, of::OptionField, f_type, field_value)
+function from_dict_generated(option_type, of::OptionField, f_type::Type, field_value::Symbol)
     if is_option(f_type)
         quote
             $field_value isa AbstractDict ||
@@ -287,7 +243,7 @@ function from_dict_union_type_generated(option_type, of::OptionField, types::Vec
     end
 end
 
-function from_dict_maybe_type_generated(option_type, of::OptionField, types::Vector{Any}, value)
+function from_dict_maybe_type_generated(option_type, of::OptionField, types::Vector{Any}, value::Symbol)
     types = filter(x -> x !== Nothing, types)
     if length(types) == 1 # Maybe{T}
         return quote
@@ -308,7 +264,7 @@ function from_dict_maybe_type_generated(option_type, of::OptionField, types::Vec
     end
 end
 
-function _from_dict_union_type_similar_reflect_field(types, value)
+function _from_dict_union_type_similar_reflect_field(types::Vector{Any}, value::Symbol)
     T = first(types)
     f_alias_map = alias_map(types)
     f_alias_map = isempty(f_alias_map) ? nothing : f_alias_map
@@ -324,7 +280,7 @@ function _from_dict_union_type_similar_reflect_field(types, value)
     end
 end
 
-function has_same_reflect_field(types)
+function has_same_reflect_field(types::Vector{Any})
     idx = find_reflect_field(first(types))
     idx === nothing && return false
 
@@ -342,7 +298,7 @@ function has_same_reflect_field(types)
     return true
 end
 
-function alias_map(types)
+function alias_map(types::Vector{Any})
     d = Dict{String, Any}()
     for t in types
         if is_option(t)
