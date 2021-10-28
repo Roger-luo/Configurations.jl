@@ -316,8 +316,8 @@ end
 
 function codegen_from_dict_specialize(def::JLKwStruct)
     quote
-        @generated function Configurations.from_dict_specialize(::Type{T}, d::AbstractDict{String}) where {T <: $(def.name)}
-            Configurations.from_dict_generated(T, :d)
+        @generated function $Configurations.from_dict_specialize(::Type{T}, d::AbstractDict{String}) where {T <: $(def.name)}
+            $Configurations.from_dict_generated(T, :d)
         end
     end
 end
