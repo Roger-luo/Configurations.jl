@@ -116,7 +116,12 @@ end
 #     return from_dict(OptionType, OptionField(f_name), T, value)
 # end
 
-function from_dict_union_type(::Type{OptionType}, of::OptionField{f_name}, ::Type{FieldType}, value) where {OptionType, f_name, FieldType}
+@generated function from_dict_union_type(::Type{OptionType}, ::OptionField{f_name}, ::Type{FieldType}, value) where {OptionType, f_name, FieldType}
+    types = Base.uniontypes(FieldType)
+    return from_dict_union_type_generated(OptionType, OptionField(f_name), types, :value)
+end
+
+function from_dict_union_type_dynamic(::Type{OptionType}, of::OptionField{f_name}, ::Type{FieldType}, value) where {OptionType, f_name, FieldType}
     assert_duplicated_alias_union(FieldType)
 
     for T in Base.uniontypes(FieldType)
@@ -277,7 +282,7 @@ function from_dict_union_type_generated(option_type, of::OptionField, types::Vec
     else # fallback to dynamic
         FieldType = Union{types...}
         return quote
-            $Configurations.from_dict_union_type($option_type, $of, $FieldType, $value)
+            $Configurations.from_dict_union_type_dynamic($option_type, $of, $FieldType, $value)
         end
     end
 end
