@@ -9,6 +9,13 @@ using Configurations: from_dict_union_type_dynamic
     y::Int = 2
 end
 
+@option struct Oversizable
+    x::Int = 1
+    y::Int = 2
+end
+
+Configurations.oversizable(::Type{Oversizable}) = true
+
 @option "option_b" struct OptionAliasB
     x::Int = 1
 end
@@ -51,15 +58,17 @@ end
     }
 end
 
-option = TestUnionType(;
-    union_of_alias=OptionAliasB(),
-    union_of_reflects=OptionReflectC(),
-    totally_mixed=OptionReflectB(),
-    maybe_totally_mixed=OptionAliasA(),
-)
-d = to_dict(option)
-
 @testset "from_dict" begin
+    @testset "oversizable" begin
+        d = Dict{String, Any}(
+            "x" => 1,
+            "y" => 2,
+            "z" => 3,
+        )
+        @test_throws InvalidKeyError from_dict(OptionAliasA, d)
+        @test from_dict(Oversizable, d) == Oversizable()
+    end
+
     @testset "test maybe union type" begin
         d = Dict{String,Any}(
             "maybe_reflect" => Dict{String,Any}(),
