@@ -8,7 +8,13 @@ can be override by keyword arguments. See also [`from_dict`](@ref).
 function from_toml(::Type{T}, filename::String; kw...) where {T}
     is_option(T) || error("not an option type")
     d = TOML.parsefile(filename)
-    d["#filename#"] = filename
+
+    filepath = normpath(filename)
+    d["#metadata#"] = Dict{String, Any}(
+        "file" => filepath,
+        "dir" => dirname(filepath),
+        "format" => "TOML",
+    )
     return from_dict(T, d; kw...)
 end
 

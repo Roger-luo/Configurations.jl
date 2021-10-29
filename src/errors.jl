@@ -3,17 +3,17 @@ struct DuplicatedAliasError <: Exception
 end
 
 function Base.showerror(io::IO, err::DuplicatedAliasError)
-    print(io, "duplicated alias name: ")
+    print(io, "DuplicatedAliasError: duplicated alias name: ")
     return printstyled(io, err.name; color=:cyan)
 end
 
 struct InvalidKeyError <: Exception
-    got::Symbol
-    keys::Vector{Symbol}
+    got::Union{Symbol, String}
+    keys::Union{Vector{Symbol}, Vector{String}}
 end
 
 function Base.showerror(io::IO, err::InvalidKeyError)
-    print(io, "invalid key ")
+    print(io, "InvalidKeyError: invalid key ")
     printstyled(io, err.got; color=:light_blue)
     print(io, ", possible keys are: ")
 
@@ -48,7 +48,7 @@ struct DuplicatedFieldError <: Exception
 end
 
 function Base.showerror(io::IO, err::DuplicatedFieldError)
-    print(io, "duplicated field ")
+    print(io, "DuplicatedFieldError: duplicated field ")
     printstyled(io, err.name; color=:light_blue)
     print(io, " in type ")
     printstyled(io, err.type; color=:green)

@@ -25,13 +25,62 @@ OptionA(;
 ```
 """
 function from_dict(::Type{OptionType}, d::AbstractDict{String}; kw...) where {OptionType}
-    isconcretetype(OptionType) ||
+    if !isconcretetype(OptionType)
         throw(ArgumentError("expect a concrete type, got $OptionType"))
+    end
+
+    # deepcopy is quite expensive
+    # error earlier before that
+    assert_field_match_exactly(OptionType, d)
+
     if !isempty(kw)
         d = from_underscore_kwargs!(deepcopy(d), OptionType; kw...)
     end
+
     return from_dict_specialize(OptionType, d)
 end
+
+"""
+    ignore_extra(option_type) -> Bool
+
+Return `true` if the option type ignores extra fields when
+read from a dict-like object.
+
+!!! note
+    Normally, we require the dict-like object to have exactly the same
+    number of fields with the option type. However, it could be useful
+    to have ignore extra fields when wrapping network work services to
+    ignore some irrelavent optional fields.
+
+!!! note
+    Unlike [pydantic](https://pydantic-docs.helpmanual.io/usage/model_config/),
+    we do not allow dynamically adding fields to a given type. One should manually
+    define fields you would like to include in a struct type and let it to have
+    type `Dict{String, Any}`.
+
+# Example
+
+```julia
+julia> Configurations.ignore_extra(::Type{MyOption}) = true
+```
+"""
+function ignore_extra(::Type{OptionType}) where {OptionType}
+    is_option(OptionType) || error("expect an option type")
+    return false
+end
+
+function assert_field_match_exactly(::Type{OptionType}, d::AbstractDict{String}) where {OptionType}
+    ignore_extra(OptionType) && return
+
+    nf = fieldcount(OptionType)
+    option_keys = [string(fieldname(OptionType, idx)) for idx in 1:nf]
+    for key in keys(d)
+        key == "#metadata#" && continue
+        key in option_keys || throw(InvalidKeyError(key, option_keys))
+    end
+    return
+end
+
 
 """
     OptionField{name}
