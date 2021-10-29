@@ -40,35 +40,6 @@ function from_dict(::Type{OptionType}, d::AbstractDict{String}; kw...) where {Op
     return from_dict_specialize(OptionType, d)
 end
 
-"""
-    ignore_extra(option_type) -> Bool
-
-Return `true` if the option type ignores extra fields when
-read from a dict-like object.
-
-!!! note
-    Normally, we require the dict-like object to have exactly the same
-    number of fields with the option type. However, it could be useful
-    to have ignore extra fields when wrapping network work services to
-    ignore some irrelavent optional fields.
-
-!!! note
-    Unlike [pydantic](https://pydantic-docs.helpmanual.io/usage/model_config/),
-    we do not allow dynamically adding fields to a given type. One should manually
-    define fields you would like to include in a struct type and let it to have
-    type `Dict{String, Any}`.
-
-# Example
-
-```julia
-julia> Configurations.ignore_extra(::Type{MyOption}) = true
-```
-"""
-function ignore_extra(::Type{OptionType}) where {OptionType}
-    is_option(OptionType) || error("expect an option type")
-    return false
-end
-
 function assert_field_match_exactly(::Type{OptionType}, d::AbstractDict{String}) where {OptionType}
     ignore_extra(OptionType) && return
 
@@ -257,41 +228,57 @@ function from_dict_generated(::Type{OptionType}, value::Symbol) where {OptionTyp
         f_name = fieldname(OptionType, f_idx)
         f_type = fieldtype(OptionType, f_idx)
         f_default = field_default(OptionType, f_name)
+        field_alias = field_alias(OptionType, OptionField(f_name))
 
         var = gensym(f_name)
-        key = string(f_name)
-        field_value = gensym(:field_value)
         push!(construct.args, var)
 
-        jl = JLIfElse()
+        key = string(f_name)
+        key_body = from_dict_parse_field(f_name, f_type, f_default, var, key, value)
 
-        if f_default === no_default
-            jl[:(!haskey($value, $key))] = :(error("expect key: $key"))
-        else
-            jl[:(!haskey($value, $key))] = :($var = $f_default)
-        end
-
-        body = from_dict_generated(OptionType, OptionField(f_name), f_type, field_value)
-        if f_default === nothing
-            jl.otherwise = quote
-                $field_value = $value[$key]
-                if $field_value isa AbstractDict && isempty($field_value)
-                    $var = nothing
-                else
-                    $var = $body
+        if field_alias === nothing
+            push!(ret.args, key_body)
+        else # field has an alias
+            quote
+                if haskey($value, $field_alias)
+                    $(from_dict_parse_field(f_name, f_type, f_default, var, key, value))
+                else # no alias
+                    $key_body
                 end
             end
-        else
-            jl.otherwise = quote
-                $field_value = $value[$key]
-                $var = $body
-            end
         end
-
-        push!(ret.args, codegen_ast(jl))
     end
     push!(ret.args, construct)
     return ret
+end
+
+function from_dict_parse_field(f_name, f_type, f_default, var, key, value)
+    jl = JLIfElse()
+    field_value = gensym(:field_value)
+
+    if f_default === no_default
+        jl[:(!haskey($value, $key))] = :(error("expect key: $key"))
+    else
+        jl[:(!haskey($value, $key))] = :($var = $f_default)
+    end
+
+    body = from_dict_generated(OptionType, OptionField(f_name), f_type, field_value)
+    if f_default === nothing
+        jl.otherwise = quote
+            $field_value = $value[$key]
+            if $field_value isa AbstractDict && isempty($field_value)
+                $var = nothing
+            else
+                $var = $body
+            end
+        end
+    else
+        jl.otherwise = quote
+            $field_value = $value[$key]
+            $var = $body
+        end
+    end
+    return codegen_ast(jl)
 end
 
 function from_dict_generated(
