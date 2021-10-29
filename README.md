@@ -4,6 +4,7 @@
 [![codecov](https://codecov.io/gh/Roger-luo/Configurations.jl/branch/master/graph/badge.svg?token=U604BQGRV1)](https://codecov.io/gh/Roger-luo/Configurations.jl)
 [![][docs-stable-img]][docs-stable-url]
 [![][docs-dev-img]][docs-dev-url]
+[![Aqua QA](aqua-img)](aqua-url)
 
 Configurations & Options made easy.
 
@@ -78,3 +79,5 @@ MIT License
 [docs-dev-url]: https://Roger-luo.github.io/Configurations.jl/dev/
 [docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
 [docs-stable-url]: https://Roger-luo.github.io/Configurations.jl/stable
+[aqua-img]: https://img.shields.io/badge/Aqua.jl-%F0%9F%8C%A2-aqua.svg
+[aqua-url]: https://github.com/JuliaTesting/Aqua.jl
