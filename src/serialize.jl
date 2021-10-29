@@ -1,10 +1,10 @@
 function assert_option(x)
-    is_option(x) || error("$(typeof(x)) is not an option type")
+    return is_option(x) || error("$(typeof(x)) is not an option type")
 end
 
 @option struct ToDictOption
-    include_defaults::Bool=true
-    exclude_nothing::Bool=false
+    include_defaults::Bool = true
+    exclude_nothing::Bool = false
 end
 
 """
@@ -12,21 +12,21 @@ end
 
 Predefined option for TOML compatible [`to_dict`](@ref) option.
 """
-const TOMLStyle = ToDictOption(include_defaults=true, exclude_nothing=true)
+const TOMLStyle = ToDictOption(; include_defaults=true, exclude_nothing=true)
 
 """
     YAMLStyle::ToDictOption
 
 Predefined option for YAML compatible [`to_dict`](@ref) option.
 """
-const YAMLStyle = ToDictOption(include_defaults=true, exclude_nothing=false)
+const YAMLStyle = ToDictOption(; include_defaults=true, exclude_nothing=false)
 
 """
     JSONStyle::ToDictOption
 
 Predefined option for JSON compatible [`to_dict`](@ref) option.
 """
-const JSONStyle = ToDictOption(include_defaults=true, exclude_nothing=false)
+const JSONStyle = ToDictOption(; include_defaults=true, exclude_nothing=false)
 
 """
     to_dict(x; include_defaults=true, exclude_nothing=false) -> OrderedDict
@@ -53,7 +53,7 @@ some convenient predefined conversion option constants as [`TOMLStyle`](@ref),
     to `true`.
 """
 function to_dict(x; kw...)
-    to_dict(x, ToDictOption(;kw...))
+    return to_dict(x, ToDictOption(; kw...))
 end
 
 """
@@ -107,7 +107,7 @@ a `String` for all kinds of option types.
 Configurations.to_dict(::Type, x::VersionNumber) = string(x)
 ```
 """
-function to_dict(::Type{T}, x, option::ToDictOption) where T
+function to_dict(::Type{T}, x, option::ToDictOption) where {T}
     if is_option(x)
         return _option_to_dict(x, option)
     else
@@ -118,7 +118,7 @@ end
 to_dict(::Type, x) = x
 
 # handle list of options as builtin
-function to_dict(::Type{T}, x::Vector, option::ToDictOption) where T
+function to_dict(::Type{T}, x::Vector, option::ToDictOption) where {T}
     return map(x) do each
         d = to_dict(T, each, option)
         if eltype(x) isa Union && is_option(each)
@@ -126,7 +126,7 @@ function to_dict(::Type{T}, x::Vector, option::ToDictOption) where T
             alias = type_alias(FieldType)
             idx = find_reflect_field(FieldType)
             if alias !== nothing && idx === nothing
-                return OrderedDict{String, Any}(alias => d)
+                return OrderedDict{String,Any}(alias => d)
             end
         end
         return d
@@ -136,7 +136,7 @@ end
 function _option_to_dict(x, option::ToDictOption)
     assert_option(x)
 
-    d = OrderedDict{String, Any}()
+    d = OrderedDict{String,Any}()
     T = typeof(x)
     for name in fieldnames(T)
         type = fieldtype(T, name)
@@ -178,9 +178,7 @@ function _option_to_dict(x, option::ToDictOption)
                     error("please define an alias for option type $(typeof(value))")
                 end
 
-                d[name_str] = OrderedDict{String, Any}(
-                    alias => field_dict,
-                )
+                d[name_str] = OrderedDict{String,Any}(alias => field_dict)
             else
                 d[name_str] = field_dict
             end
@@ -195,7 +193,7 @@ end
 `T` is an option struct or if `T` is an union, one of the types
 is an option struct.
 """
-function is_option_maybe(::Type{T}) where T
+function is_option_maybe(::Type{T}) where {T}
     is_option(T) && return true
     T isa Union || return false
     return is_option_maybe(T.a) || is_option_maybe(T.b)

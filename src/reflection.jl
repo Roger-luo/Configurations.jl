@@ -16,7 +16,7 @@ end
 
 Return default values of given option types.
 """
-function field_defaults(::Type{T}) where T
+function field_defaults(::Type{T}) where {T}
     is_option(T) || error("$T is not an option type")
     return Any[field_default(T, each) for each in fieldnames(T)]
 end
@@ -35,8 +35,8 @@ end
 
 Return the alias name of given `OptionType`.
 """
-function type_alias(::Type{T}) where T
-    error("type alias is not defined $T, it may not be an option type")
+function type_alias(::Type{T}) where {T}
+    return error("type alias is not defined $T, it may not be an option type")
 end
 
 @deprecate alias(T) type_alias(T)

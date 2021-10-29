@@ -4,7 +4,7 @@ end
 
 function Base.showerror(io::IO, err::DuplicatedAliasError)
     print(io, "duplicated alias name: ")
-    printstyled(io, err.name; color=:cyan)
+    return printstyled(io, err.name; color=:cyan)
 end
 
 struct InvalidKeyError <: Exception
@@ -33,7 +33,7 @@ function Base.showerror(io::IO, err::InvalidKeyError)
             end
         end
     end
-    return
+    return nothing
 end
 
 """
@@ -52,5 +52,5 @@ function Base.showerror(io::IO, err::DuplicatedFieldError)
     printstyled(io, err.name; color=:light_blue)
     print(io, " in type ")
     printstyled(io, err.type; color=:green)
-    print(io, " and its sub-fields")
+    return print(io, " and its sub-fields")
 end
