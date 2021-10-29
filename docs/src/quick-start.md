@@ -350,10 +350,10 @@ where we assume you have written a constructor from `String` here.
 
 However, in some cases, you may want to do the conversion only for one `OptionType` without causing
 type piracy, for example, one may want to convert all the `String` to `Symbol` for `MyOption`, this
-can be done by overloading [`Configurations.convert_to_option`](@ref)
+can be done by overloading [`Configurations.from_dict`](@ref)
 
 ```julia
-Configurations.convert_to_option(::Type{MyOption}, ::Type{Symbol}, s) = Symbol(s)
+Configurations.from_dict(::Type{MyOption}, ::Type{Symbol}, s) = Symbol(s)
 ```
 
 For more detailed type conversion mechanism, please read the [Type Conversion](@ref type-conversion) section.

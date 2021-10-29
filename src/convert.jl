@@ -14,6 +14,10 @@ but will not error if the conversion is not overloaded, and will return a [`Conv
 object, but one can use this to avoid type piracy and define contextual conversion based on option
 types.
 
+!!! compat "Configurations 0.17"
+
+    This interface is deprecated in favor of [`from_dict`](@ref) from 0.17.
+
 # Example
 
 One may have different string syntax for a `Symbol`, e.g
