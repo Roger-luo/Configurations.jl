@@ -4,7 +4,11 @@
 Return the default value of field `name` of an option type `T`.
 """
 function field_default(::Type{T}, name::Symbol) where {T}
-    error("field_default is not defined for $T, it may not be an option type")
+    if !isconcretetype(T) && is_option(T)
+        error("field_default requires a concrete type, got $T{...}")
+    else
+        error("field_default is not defined for $T, it may not be an option type")
+    end
 end
 
 """

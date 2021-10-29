@@ -124,7 +124,7 @@ function to_dict(::Type{T}, x::Vector, option::ToDictOption) where T
         if eltype(x) isa Union && is_option(each)
             FieldType = typeof(each)
             alias = type_alias(FieldType)
-            idx = find_relfect_field(FieldType)
+            idx = find_reflect_field(FieldType)
             if alias !== nothing && idx === nothing
                 return OrderedDict{String, Any}(alias => d)
             end
@@ -173,12 +173,13 @@ function _option_to_dict(x, option::ToDictOption)
                     continue
                 end
 
-                if type_alias(typeof(value)) === nothing
+                alias = type_alias(typeof(value))
+                if alias === nothing
                     error("please define an alias for option type $(typeof(value))")
                 end
 
                 d[name_str] = OrderedDict{String, Any}(
-                    type_alias(typeof(value)) => field_dict,
+                    alias => field_dict,
                 )
             else
                 d[name_str] = field_dict
