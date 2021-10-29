@@ -81,19 +81,18 @@ OptionD(;
 ```
 """
 macro option(ex)
-    esc(option_m(__module__, ex))
+    return esc(option_m(__module__, ex))
 end
 
 macro option(alias::String, ex)
-    esc(option_m(__module__, ex, alias))
+    return esc(option_m(__module__, ex, alias))
 end
 
 function option_m(mod::Module, ex, type_alias=nothing)
     ex = macroexpand(mod, ex)
     def = JLKwStruct(ex, type_alias)
-    has_duplicated_reflect_type(mod, def) && throw(
-        ArgumentError("struct fields contain duplicated `Reflect` type")
-    )
+    has_duplicated_reflect_type(mod, def) &&
+        throw(ArgumentError("struct fields contain duplicated `Reflect` type"))
     add_field_defaults!(mod, def)
     return codegen_option_type(def)
 end
@@ -217,7 +216,7 @@ Generate `Base.convert` from `AbstractDict{String}` to the given option type.
 function codegen_convert(def::JLKwStruct)
     quote
         function $Base.convert(::Type{<:$(def.name)}, d::AbstractDict{String})
-            $Configurations.from_dict($(def.name), d)
+            return $Configurations.from_dict($(def.name), d)
         end
     end
 end
@@ -235,8 +234,8 @@ function codegen_field_default(def::JLKwStruct)
     ret = JLIfElse()
     ret.otherwise = err
 
-    isconst = Dict{Symbol, Bool}()
-    default = Dict{Symbol, Any}()
+    isconst = Dict{Symbol,Bool}()
+    default = Dict{Symbol,Any}()
     prev_field_names = Symbol[]
 
     for (k, field) in enumerate(def.fields)
@@ -253,10 +252,7 @@ function codegen_field_default(def::JLKwStruct)
         if isempty(vars) # const default
             ret[cond] = field.default
         else
-            jlfn = JLFunction(;
-                args=vars,
-                body=field.default,
-            )
+            jlfn = JLFunction(; args=vars, body=field.default)
             fn = gensym(:fn)
             ret[cond] = quote
                 $fn = $(codegen_ast(jlfn))
@@ -277,7 +273,7 @@ function codegen_field_default(def::JLKwStruct)
             args=[:(::Type{$type}), :($obj::Symbol)],
             body=codegen_ast(ret),
             whereparams=[typevars..., :($type <: $ub)],
-        )
+        ),
     )
 end
 
@@ -311,13 +307,15 @@ end
 Generate [`Configurations.create`](@ref) overload.
 """
 function codegen_create(def::JLKwStruct)
-    codegen_ast_kwfn(def, :($Configurations.create))
+    return codegen_ast_kwfn(def, :($Configurations.create))
 end
 
 function codegen_from_dict_specialize(def::JLKwStruct)
     quote
-        @generated function $Configurations.from_dict_specialize(::Type{T}, d::AbstractDict{String}) where {T <: $(def.name)}
-            $Configurations.from_dict_generated(T, :d)
+        @generated function $Configurations.from_dict_specialize(
+            ::Type{T}, d::AbstractDict{String}
+        ) where {T<:$(def.name)}
+            return $Configurations.from_dict_generated(T, :d)
         end
     end
 end

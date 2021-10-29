@@ -48,5 +48,5 @@ julia> from_dict(SymbolNeedsColon, d)
 ERROR: expect a Symbol, got String
 ```
 """
-convert_to_option(::Type, ::Type{T}, x) where T = convert_to_option(T, x)
-convert_to_option(::Type{T}, x) where T = ConvertNotFound()
+convert_to_option(::Type, ::Type{T}, x) where {T} = convert_to_option(T, x)
+convert_to_option(::Type{T}, x) where {T} = ConvertNotFound()

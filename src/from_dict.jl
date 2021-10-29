@@ -25,7 +25,8 @@ OptionA(;
 ```
 """
 function from_dict(::Type{OptionType}, d::AbstractDict{String}; kw...) where {OptionType}
-    isconcretetype(OptionType) || throw(ArgumentError("expect a concrete type, got $OptionType"))
+    isconcretetype(OptionType) ||
+        throw(ArgumentError("expect a concrete type, got $OptionType"))
     if !isempty(kw)
         d = from_underscore_kwargs!(deepcopy(d), OptionType; kw...)
     end
@@ -49,11 +50,13 @@ OptionField(name::Symbol) = OptionField{name}()
 For option type `OptionType`, convert the object `x` to the field type `T` and assign it to the field
 `f_name`.
 """
-function from_dict(::Type{OptionType}, ::OptionField, ::Type{T}, x) where {OptionType, T}
+function from_dict(::Type{OptionType}, ::OptionField, ::Type{T}, x) where {OptionType,T}
     return from_dict(OptionType, T, x)
 end
 
-function from_dict(::Type{OptionType}, of::OptionField, ::Type{T}, x) where {OptionType, T <: AbstractVector}
+function from_dict(
+    ::Type{OptionType}, of::OptionField, ::Type{T}, x
+) where {OptionType,T<:AbstractVector}
     if eltype(T) isa Union
         return map(x) do each
             from_dict_union_type(OptionType, of, eltype(T), each)
@@ -73,7 +76,7 @@ For option type `OptionType`, convert the object `x` to type `T`. This is
 similar to `Base.convert(::Type{T}, x)` and will fallback to `Base.convert`
 if not defined.
 """
-function from_dict(::Type{OptionType}, ::Type{T}, x) where {OptionType, T}
+function from_dict(::Type{OptionType}, ::Type{T}, x) where {OptionType,T}
     is_option(T) && return from_dict(T, x)
     # TODO: deprecate convert_to_option
     # then just use the following
@@ -84,7 +87,7 @@ end
 
 from_dict(::Type, ::Type{VersionNumber}, x) = VersionNumber(x)
 
-function deprecated_conversion(::Type{OptionType}, ::Type{T}, x) where {OptionType, T}
+function deprecated_conversion(::Type{OptionType}, ::Type{T}, x) where {OptionType,T}
     ret = convert_to_option(OptionType, T, x)
     if ret === ConvertNotFound()
         return convert(T, x)
@@ -93,19 +96,23 @@ function deprecated_conversion(::Type{OptionType}, ::Type{T}, x) where {OptionTy
     end
 end
 
-@generated function from_dict_union_type(::Type{OptionType}, ::OptionField{f_name}, ::Type{FieldType}, value) where {OptionType, f_name, FieldType}
+@generated function from_dict_union_type(
+    ::Type{OptionType}, ::OptionField{f_name}, ::Type{FieldType}, value
+) where {OptionType,f_name,FieldType}
     types = Base.uniontypes(FieldType)
     return from_dict_union_type_generated(OptionType, OptionField(f_name), types, :value)
 end
 
-function from_dict_union_type_dynamic(::Type{OptionType}, of::OptionField{f_name}, ::Type{FieldType}, value) where {OptionType, f_name, FieldType}
+function from_dict_union_type_dynamic(
+    ::Type{OptionType}, of::OptionField{f_name}, ::Type{FieldType}, value
+) where {OptionType,f_name,FieldType}
     FieldType isa Union || return from_dict(OptionType, of, FieldType, value)
     assert_duplicated_alias_union(FieldType)
 
     types = Base.uniontypes(FieldType)
     if Nothing in types
-        value === nothing && return # happy path
-        types = filter(x->x!==Nothing, types)
+        value === nothing && return nothing # happy path
+        types = filter(x -> x !== Nothing, types)
         if length(types) == 1
             return from_dict(OptionType, of, types[1], value)
         end
@@ -150,7 +157,7 @@ function from_dict_union_type_dynamic(::Type{OptionType}, of::OptionField{f_name
             end
         end
     end
-    error("cannot parse field $f_name, expect $FieldType, got $(typeof(value))")
+    return error("cannot parse field $f_name, expect $FieldType, got $(typeof(value))")
 end
 
 function find_reflect_field(::Type{OptionType}) where {OptionType}
@@ -161,7 +168,7 @@ function find_reflect_field(::Type{OptionType}) where {OptionType}
             return f_idx
         end
     end
-    return
+    return nothing
 end
 
 function assert_duplicated_alias_union(::Type{UnionType}) where {UnionType}
@@ -175,7 +182,7 @@ function assert_duplicated_alias_union(::Type{UnionType}) where {UnionType}
             end
         end
     end
-    return
+    return nothing
 end
 
 """
@@ -238,7 +245,9 @@ function from_dict_generated(::Type{OptionType}, value::Symbol) where {OptionTyp
     return ret
 end
 
-function from_dict_generated(option_type, of::OptionField, f_type::Type, field_value::Symbol)
+function from_dict_generated(
+    option_type, of::OptionField, f_type::Type, field_value::Symbol
+)
     if is_option(f_type)
         quote
             $field_value isa AbstractDict ||
@@ -261,7 +270,8 @@ function from_dict_generated(option_type, of::OptionField, f_type::Type, field_v
             end
         else
             quote
-                $field_value == $alias || $Configurations.parse_jltype($field_value) <: $option_type ||
+                $field_value == $alias ||
+                    $Configurations.parse_jltype($field_value) <: $option_type ||
                     throw(ArgumentError($msg * " $($field_value)"))
                 Reflect()
             end
@@ -273,7 +283,9 @@ function from_dict_generated(option_type, of::OptionField, f_type::Type, field_v
     end
 end
 
-function from_dict_union_type_generated(option_type, of::OptionField, types::Vector{Any}, value::Symbol)
+function from_dict_union_type_generated(
+    option_type, of::OptionField, types::Vector{Any}, value::Symbol
+)
     if Nothing in types
         from_dict_maybe_type_generated(option_type, of, types, value)
     elseif has_same_reflect_field(types)
@@ -281,12 +293,16 @@ function from_dict_union_type_generated(option_type, of::OptionField, types::Vec
     else # fallback to dynamic
         FieldType = Union{types...}
         return quote
-            $Configurations.from_dict_union_type_dynamic($option_type, $of, $FieldType, $value)
+            $Configurations.from_dict_union_type_dynamic(
+                $option_type, $of, $FieldType, $value
+            )
         end
     end
 end
 
-function from_dict_maybe_type_generated(option_type, of::OptionField, types::Vector{Any}, value::Symbol)
+function from_dict_maybe_type_generated(
+    option_type, of::OptionField, types::Vector{Any}, value::Symbol
+)
     types = filter(x -> x !== Nothing, types)
     if length(types) == 1 # Maybe{T}
         return quote
@@ -352,7 +368,7 @@ end
 Create a `Dict` mapping type alias to a type.
 """
 function alias_map(types::Vector{Any})
-    d = Dict{String, Any}()
+    d = Dict{String,Any}()
     for t in types
         if is_option(t)
             alias = type_alias(t)

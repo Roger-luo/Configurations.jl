@@ -9,8 +9,8 @@ See also [`from_dict`](@ref).
 - `from_underscore_kwargs!`: use `_` to disambiguate subfields of the same name, this is the default behaviour.
 - `from_field_kwargs!`: do not disambiguate subfields, errors if there are disambiguity
 """
-function from_kwargs(convention!, ::Type{T}; kw...) where T
-    d = OrderedDict{String, Any}()
+function from_kwargs(convention!, ::Type{T}; kw...) where {T}
+    d = OrderedDict{String,Any}()
     convention!(d, T; kw...)
     return from_dict(T, d)
 end
@@ -20,21 +20,23 @@ end
 
 Convert keyword arguments to given option type `T` using the underscore convention.
 """
-from_kwargs(::Type{T}; kw...) where T = from_underscore_kwargs(T; kw...)
+from_kwargs(::Type{T}; kw...) where {T} = from_underscore_kwargs(T; kw...)
 
 """
     from_underscore_kwargs(::Type{T}; kw...) where T
 
 Convert keyword arguments to given option type `T` using the underscore convention.
 """
-from_underscore_kwargs(::Type{T}; kw...) where T = from_kwargs(from_underscore_kwargs!, T; kw...)
+function from_underscore_kwargs(::Type{T}; kw...) where {T}
+    return from_kwargs(from_underscore_kwargs!, T; kw...)
+end
 
 """
     from_field_kwargs(::Type{T}; kw...) where T
 
 Convert keyword arguments to given option type `T` using the field keyword convention.
 """
-from_field_kwargs(::Type{T}; kw...) where T = from_kwargs(from_field_kwargs!, T; kw...)
+from_field_kwargs(::Type{T}; kw...) where {T} = from_kwargs(from_field_kwargs!, T; kw...)
 
 # NOTE: this is for compatibilty
 """
@@ -43,16 +45,22 @@ from_field_kwargs(::Type{T}; kw...) where T = from_kwargs(from_field_kwargs!, T;
 Internal method for inserting keyword arguments to given dictionary object `d`. It will overwrite
 existing keys in `d` if it is specified by keyword argument.
 """
-function from_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} = nothing; kw...) where T
+function from_kwargs!(
+    d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol}=nothing; kw...
+) where {T}
     return from_underscore_kwargs!(d, T, prefix; kw...)
 end
 
-function from_underscore_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} = nothing; kw...) where T
+function from_underscore_kwargs!(
+    d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol}=nothing; kw...
+) where {T}
     validate_keywords(T, underscore_keywords(T); kw...)
-    unsafe_from_underscore_kwargs!(d, T, prefix; kw...)
+    return unsafe_from_underscore_kwargs!(d, T, prefix; kw...)
 end
 
-function unsafe_from_underscore_kwargs!(d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol} = nothing; kw...) where T
+function unsafe_from_underscore_kwargs!(
+    d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol}=nothing; kw...
+) where {T}
     return foreach_keywords!(d, T) do name, type
         key = underscore(prefix, name)
 
@@ -62,12 +70,12 @@ function unsafe_from_underscore_kwargs!(d::AbstractDict{String}, ::Type{T}, pref
     end
 end
 
-function from_field_kwargs!(d::AbstractDict{String}, ::Type{T}; kw...) where T
+function from_field_kwargs!(d::AbstractDict{String}, ::Type{T}; kw...) where {T}
     validate_keywords(T, field_keywords(T); kw...)
-    unsafe_from_field_kwargs!(d, T; kw...)
+    return unsafe_from_field_kwargs!(d, T; kw...)
 end
 
-function unsafe_from_field_kwargs!(d::AbstractDict{String}, ::Type{T}; kw...) where T
+function unsafe_from_field_kwargs!(d::AbstractDict{String}, ::Type{T}; kw...) where {T}
     return foreach_keywords!(d, T) do name, type
         from_kwargs_option_key!(d, type, name, name, kw) do field_d, field_type
             unsafe_from_field_kwargs!(field_d, field_type; kw...)
@@ -75,7 +83,9 @@ function unsafe_from_field_kwargs!(d::AbstractDict{String}, ::Type{T}; kw...) wh
     end
 end
 
-function from_kwargs_option_key!(f, d::AbstractDict, ::Type{T}, name::Symbol, key::Symbol, kw) where T
+function from_kwargs_option_key!(
+    f, d::AbstractDict, ::Type{T}, name::Symbol, key::Symbol, kw
+) where {T}
     key_str = string(key)
     name_str = string(name)
     # shortcut
@@ -83,9 +93,9 @@ function from_kwargs_option_key!(f, d::AbstractDict, ::Type{T}, name::Symbol, ke
         d[name_str] = kw[key]
         return d
     end
-    
+
     if is_option(T)
-        field_d = OrderedDict{String, Any}()
+        field_d = OrderedDict{String,Any}()
         if haskey(d, name_str) && (d_value = d[name_str]) isa AbstractDict
             field_d = merge!(field_d, d_value)
         end
@@ -101,11 +111,11 @@ function from_kwargs_option_key!(f, d::AbstractDict, ::Type{T}, name::Symbol, ke
     return d
 end
 
-function validate_keywords(::Type{T}, keys = underscore_keywords(T); kw...) where T
+function validate_keywords(::Type{T}, keys=underscore_keywords(T); kw...) where {T}
     for (k, v) in kw
         k in keys || throw(InvalidKeyError(k, keys))
     end
-    return
+    return nothing
 end
 
 """
@@ -113,7 +123,7 @@ end
 
 Return all the option type field names given `T`, error if there are duplicated sub-fields.
 """
-function field_keywords(::Type{T}) where T
+function field_keywords(::Type{T}) where {T}
     return collect_field_keywords!(Symbol[], T, T)
 end
 
@@ -122,11 +132,11 @@ end
 
 Return keywords given `T` using the underscore convention.
 """
-function underscore_keywords(::Type{T}) where T
+function underscore_keywords(::Type{T}) where {T}
     return collect_underscore_keywords!(Symbol[], T)
 end
 
-function foreach_keywords!(f, list, ::Type{T}) where T
+function foreach_keywords!(f, list, ::Type{T}) where {T}
     is_option(T) || return list
 
     for name in fieldnames(T)
@@ -144,7 +154,7 @@ function underscore(prefix::Maybe{Symbol}, name)
     end
 end
 
-function collect_field_keywords!(list::Vector{Symbol}, ::Type{Top}, ::Type{T}) where {Top, T}
+function collect_field_keywords!(list::Vector{Symbol}, ::Type{Top}, ::Type{T}) where {Top,T}
     return foreach_keywords!(list, T) do name, type
         if is_option(type)
             collect_field_keywords!(list, Top, type)
@@ -161,7 +171,9 @@ function collect_field_keywords!(list::Vector{Symbol}, ::Type{Top}, ::Type{T}) w
     end
 end
 
-function collect_underscore_keywords!(list::Vector{Symbol}, ::Type{T}, prefix::Maybe{Symbol} = nothing) where T
+function collect_underscore_keywords!(
+    list::Vector{Symbol}, ::Type{T}, prefix::Maybe{Symbol}=nothing
+) where {T}
     return foreach_keywords!(list, T) do name, type
         key = underscore(prefix, name)
 

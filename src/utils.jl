@@ -12,7 +12,7 @@ Compare option types check if they are the same.
 """
 function compare_options(a, b, xs...)::Bool
     compare_options(a, b) || return false
-    compare_options(b, xs...)
+    return compare_options(b, xs...)
 end
 
 compare_options(a, b) = false
@@ -32,11 +32,12 @@ function tryparse_jltype(s, alias_map=nothing)
     end
 
     type_ex = Meta.parse(s)
-    is_datatype_expr(type_ex) || throw(ArgumentError("expect type expression got: $type_ex"))
+    is_datatype_expr(type_ex) ||
+        throw(ArgumentError("expect type expression got: $type_ex"))
     try
         return eval(type_ex)
     catch
-        return
+        return nothing
     end
 end
 
@@ -59,18 +60,18 @@ function full_typename(jltype::DataType)
     end
 end
 
-function contains_reflect_type(::Type{T}) where T
+function contains_reflect_type(::Type{T}) where {T}
     for idx in 1:fieldcount(T)
         Reflect === fieldtype(T, idx) && return true
     end
     return false
 end
 
-function is_union_of_multiple_options(::Type{T}) where T
+function is_union_of_multiple_options(::Type{T}) where {T}
     T isa Union || return false
     T.a === Nothing && return is_union_of_multiple_options(T.b)
     T.b === Nothing && return is_union_of_multiple_options(T.a)
-    
+
     # not option type
     return is_option_maybe(T.a) && is_option_maybe(T.b)
 end
