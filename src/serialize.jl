@@ -74,6 +74,9 @@ function to_dict(x, option::ToDictOption)
     return to_dict(typeof(x), x, option)
 end
 
+# disambiguity
+to_dict(x::Type, ::ToDictOption) = error("$x is not an option type")
+
 """
     to_dict(::Type{T}, x, option::ConvertOption) where T
 

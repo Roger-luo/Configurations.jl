@@ -1,3 +1,7 @@
+using Aqua
+using Configurations
+Aqua.test_all(Configurations)
+
 include("test_utils.jl")
 include("test_basic.jl")
 include("test_from_dict.jl")
