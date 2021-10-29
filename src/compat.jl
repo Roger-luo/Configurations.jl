@@ -11,7 +11,6 @@ end
 # NOTE: for 1.0 compat
 @static if !@isdefined(hasfield)
     function hasfield(T::Type, name::Symbol)
-        @_pure_meta
         return fieldindex(T, name, false) > 0
     end
 end
