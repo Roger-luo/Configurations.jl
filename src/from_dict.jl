@@ -41,26 +41,36 @@ function from_dict(::Type{OptionType}, d::AbstractDict{String}; kw...) where {Op
 end
 
 """
-    oversizable(option_type) -> Bool
+    ignore_extra(option_type) -> Bool
 
-Return `true` if the option type is oversizable. By oversizable,
-it means when read from a dict-like object, it doesn't require
-the object contains exactly the same field this option type has.
-Instead, the dict-like object may contain more fields than the
-option type requires.
+Return `true` if the option type ignores extra fields when
+read from a dict-like object.
 
-Normally, we require the dict-like object to have exactly the same
-number of fields with the option type. However, it could be useful
-to have oversizable option when wrapping network work services to
-ignore some irrelavent optional fields.
+!!! note
+    Normally, we require the dict-like object to have exactly the same
+    number of fields with the option type. However, it could be useful
+    to have ignore extra fields when wrapping network work services to
+    ignore some irrelavent optional fields.
+
+!!! note
+    Unlike [pydantic](https://pydantic-docs.helpmanual.io/usage/model_config/),
+    we do not allow dynamically adding fields to a given type. One should manually
+    define fields you would like to include in a struct type and let it to have
+    type `Dict{String, Any}`.
+
+# Example
+
+```julia
+julia> Configurations.ignore_extra(::Type{MyOption}) = true
+```
 """
-function oversizable(::Type{OptionType}) where {OptionType}
+function ignore_extra(::Type{OptionType}) where {OptionType}
     is_option(OptionType) || error("expect an option type")
     return false
 end
 
 function assert_field_match_exactly(::Type{OptionType}, d::AbstractDict{String}) where {OptionType}
-    oversizable(OptionType) && return
+    ignore_extra(OptionType) && return
 
     nf = fieldcount(OptionType)
     option_keys = [string(fieldname(OptionType, idx)) for idx in 1:nf]

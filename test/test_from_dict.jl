@@ -9,12 +9,12 @@ using Configurations: from_dict_union_type_dynamic
     y::Int = 2
 end
 
-@option struct Oversizable
+@option struct IgnoreExtra
     x::Int = 1
     y::Int = 2
 end
 
-Configurations.oversizable(::Type{Oversizable}) = true
+Configurations.ignore_extra(::Type{IgnoreExtra}) = true
 
 @option "option_b" struct OptionAliasB
     x::Int = 1
@@ -59,14 +59,14 @@ end
 end
 
 @testset "from_dict" begin
-    @testset "oversizable" begin
+    @testset "ignore_extra" begin
         d = Dict{String, Any}(
             "x" => 1,
             "y" => 2,
             "z" => 3,
         )
         @test_throws InvalidKeyError from_dict(OptionAliasA, d)
-        @test from_dict(Oversizable, d) == Oversizable()
+        @test from_dict(IgnoreExtra, d) == IgnoreExtra()
     end
 
     @testset "test maybe union type" begin
