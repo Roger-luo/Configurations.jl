@@ -32,18 +32,7 @@ julia> "Option B"
            float::Float64 = 0.3
        end
 ```
-
-and convert a dict to an option type via [`from_dict`](@ref).
-
-```julia-repl
-julia> d = Dict{String, Any}(
-           "opt" => Dict{String, Any}(
-               "name" => "Roger",
-               "int" => 2,
-           ),
-           "float" => 0.33
-       );
-
+OptionC{Float32}
 julia> option = from_dict(OptionB, d)
 OptionB(;
     opt = OptionA(;
@@ -91,10 +80,24 @@ end
 function option_m(mod::Module, ex, type_alias=nothing)
     ex = macroexpand(mod, ex)
     def = JLKwStruct(ex, type_alias)
+    return codegen_option_type(def)
+end
+
+"""
+    validate_option_def(def::JLKwStruct)
+
+Validate the option definition.
+"""
+function validate_option_def(def::JLKwStruct)
+    if def.typealias === nothing
+        isempty(def.typevars) ||
+            throw(ArgumentError(
+                "only concrete type definition can have type alias"
+        ))
+    end
     has_duplicated_reflect_type(mod, def) &&
         throw(ArgumentError("struct fields contain duplicated `Reflect` type"))
-    add_field_defaults!(mod, def)
-    return codegen_option_type(def)
+    return
 end
 
 """
@@ -104,6 +107,10 @@ Generate the `Configurations` option type definition from
 a given `JLKwStruct` created by [`Expronicon`](https://github.com/Roger-luo/Expronicon.jl).
 """
 function codegen_option_type(def::JLKwStruct)
+    # preprocess
+    validate_option_def(def)
+    add_field_defaults!(mod, def)
+
     quote
         $(codegen_ast(def))
         Core.@__doc__ $(def.name)
@@ -118,6 +125,11 @@ function codegen_option_type(def::JLKwStruct)
     end
 end
 
+"""
+    add_field_defaults!(m::Module, def::JLKwStruct)
+
+Add default value for `Maybe` and `Reflect` type.
+"""
 function add_field_defaults!(m::Module, def::JLKwStruct)
     for field in def.fields
         if is_reflect_type_expr(m, field.type)
@@ -129,6 +141,11 @@ function add_field_defaults!(m::Module, def::JLKwStruct)
     return def
 end
 
+"""
+    has_duplicated_reflect_type(m::Module, def::JLKwStruct)
+
+Check if the definition has duplicated reflect type.
+"""
 function has_duplicated_reflect_type(m::Module, def::JLKwStruct)
     has_reflect_type = false
     for field in def.fields
@@ -140,6 +157,11 @@ function has_duplicated_reflect_type(m::Module, def::JLKwStruct)
     return false
 end
 
+"""
+    is_reflect_type_expr(m::Module, @nospecialize(ex))
+
+Check if the expression `ex` evaluates to a [`Reflect`](@ref).
+"""
 function is_reflect_type_expr(m::Module, @nospecialize(ex))
     if isdefined(m, :Reflect) && (getfield(m, :Reflect) === Reflect)
         ex === :Reflect && return true
@@ -156,6 +178,11 @@ function is_reflect_type_expr(m::Module, @nospecialize(ex))
     return false
 end
 
+"""
+    is_maybe_type_expr(m::Module, @nospecialize(ex))
+
+Check if the expression `ex` evaluates to a `Maybe{T}`.
+"""
 function is_maybe_type_expr(m::Module, @nospecialize(ex))
     if isdefined(m, :Maybe) && (getfield(m, :Maybe) === Maybe)
         _is_maybe_type_expr(ex) && return true
@@ -234,8 +261,6 @@ function codegen_field_default(def::JLKwStruct)
     ret = JLIfElse()
     ret.otherwise = err
 
-    isconst = Dict{Symbol,Bool}()
-    default = Dict{Symbol,Any}()
     prev_field_names = Symbol[]
 
     for (k, field) in enumerate(def.fields)
@@ -310,6 +335,11 @@ function codegen_create(def::JLKwStruct)
     return codegen_ast_kwfn(def, :($Configurations.create))
 end
 
+"""
+    codegen_from_dict_specialize(def::JLKwStruct)
+
+Generate the specialized `from_dict` for the given definition.
+"""
 function codegen_from_dict_specialize(def::JLKwStruct)
     quote
         @generated function $Configurations.from_dict_specialize(

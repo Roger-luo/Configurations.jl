@@ -386,10 +386,13 @@ function _from_dict_union_type_similar_reflect_field(types::Vector{Any}, value::
     reflect_key = string(fieldname(T, idx))
     msg = "expect key: $reflect_key"
 
+    type_err_msg = "expect one of the following option type: " *
+        join(map(x->string("`", x, "`"), types), ", ")
     @gensym type
     return quote
         haskey($value, $reflect_key) || error($msg)
         $type = $Configurations.parse_jltype($value[$reflect_key], $f_alias_map)
+        $type <: $(Union{types...}) || error($type_err_msg * " got `$($type)`")
         $Configurations.from_dict_specialize($type, $value)
     end
 end
