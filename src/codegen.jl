@@ -80,7 +80,7 @@ end
 function option_m(mod::Module, ex, type_alias=nothing)
     ex = macroexpand(mod, ex)
     def = JLKwStruct(ex, type_alias)
-    return codegen_option_type(def)
+    return codegen_option_type(mod, def)
 end
 
 """
@@ -88,7 +88,7 @@ end
 
 Validate the option definition.
 """
-function validate_option_def(def::JLKwStruct)
+function validate_option_def(mod::Module, def::JLKwStruct)
     if def.typealias === nothing
         isempty(def.typevars) ||
             throw(ArgumentError(
@@ -101,14 +101,14 @@ function validate_option_def(def::JLKwStruct)
 end
 
 """
-    codegen_option_type(def::JLKwStruct)
+    codegen_option_type(mod::Module, def::JLKwStruct)
 
 Generate the `Configurations` option type definition from
 a given `JLKwStruct` created by [`Expronicon`](https://github.com/Roger-luo/Expronicon.jl).
 """
-function codegen_option_type(def::JLKwStruct)
+function codegen_option_type(mod::Module, def::JLKwStruct)
     # preprocess
-    validate_option_def(def)
+    validate_option_def(mod, def)
     add_field_defaults!(mod, def)
 
     quote
