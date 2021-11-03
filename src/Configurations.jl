@@ -1,12 +1,19 @@
 module Configurations
 
-export @option, from_dict, from_kwargs, from_toml, to_dict, to_toml
-
 using TOML
 using ExproniconLite
 using OrderedCollections
 
-export no_default,
+export @option,
+    @type_alias,
+    # main interface
+    from_dict,
+    from_kwargs,
+    from_toml,
+    to_dict,
+    to_toml,
+    # builtin types
+    no_default,
     Maybe,
     Reflect,
     OptionField,

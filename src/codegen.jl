@@ -32,18 +32,7 @@ julia> "Option B"
            float::Float64 = 0.3
        end
 ```
-
-and convert a dict to an option type via [`from_dict`](@ref).
-
-```julia-repl
-julia> d = Dict{String, Any}(
-           "opt" => Dict{String, Any}(
-               "name" => "Roger",
-               "int" => 2,
-           ),
-           "float" => 0.33
-       );
-
+OptionC{Float32}
 julia> option = from_dict(OptionB, d)
 OptionB(;
     opt = OptionA(;
@@ -91,19 +80,37 @@ end
 function option_m(mod::Module, ex, type_alias=nothing)
     ex = macroexpand(mod, ex)
     def = JLKwStruct(ex, type_alias)
-    has_duplicated_reflect_type(mod, def) &&
-        throw(ArgumentError("struct fields contain duplicated `Reflect` type"))
-    add_field_defaults!(mod, def)
-    return codegen_option_type(def)
+    return codegen_option_type(mod, def)
 end
 
 """
-    codegen_option_type(def::JLKwStruct)
+    validate_option_def(def::JLKwStruct)
+
+Validate the option definition.
+"""
+function validate_option_def(mod::Module, def::JLKwStruct)
+    if def.typealias !== nothing
+        isempty(def.typevars) ||
+            throw(ArgumentError(
+                "only concrete type definition can have type alias"
+        ))
+    end
+    has_duplicated_reflect_type(mod, def) &&
+        throw(ArgumentError("struct fields contain duplicated `Reflect` type"))
+    return
+end
+
+"""
+    codegen_option_type(mod::Module, def::JLKwStruct)
 
 Generate the `Configurations` option type definition from
 a given `JLKwStruct` created by [`Expronicon`](https://github.com/Roger-luo/Expronicon.jl).
 """
-function codegen_option_type(def::JLKwStruct)
+function codegen_option_type(mod::Module, def::JLKwStruct)
+    # preprocess
+    validate_option_def(mod, def)
+    add_field_defaults!(mod, def)
+
     quote
         $(codegen_ast(def))
         Core.@__doc__ $(def.name)
@@ -118,6 +125,11 @@ function codegen_option_type(def::JLKwStruct)
     end
 end
 
+"""
+    add_field_defaults!(m::Module, def::JLKwStruct)
+
+Add default value for `Maybe` and `Reflect` type.
+"""
 function add_field_defaults!(m::Module, def::JLKwStruct)
     for field in def.fields
         if is_reflect_type_expr(m, field.type)
@@ -129,6 +141,11 @@ function add_field_defaults!(m::Module, def::JLKwStruct)
     return def
 end
 
+"""
+    has_duplicated_reflect_type(m::Module, def::JLKwStruct)
+
+Check if the definition has duplicated reflect type.
+"""
 function has_duplicated_reflect_type(m::Module, def::JLKwStruct)
     has_reflect_type = false
     for field in def.fields
@@ -140,6 +157,11 @@ function has_duplicated_reflect_type(m::Module, def::JLKwStruct)
     return false
 end
 
+"""
+    is_reflect_type_expr(m::Module, @nospecialize(ex))
+
+Check if the expression `ex` evaluates to a [`Reflect`](@ref).
+"""
 function is_reflect_type_expr(m::Module, @nospecialize(ex))
     if isdefined(m, :Reflect) && (getfield(m, :Reflect) === Reflect)
         ex === :Reflect && return true
@@ -156,6 +178,11 @@ function is_reflect_type_expr(m::Module, @nospecialize(ex))
     return false
 end
 
+"""
+    is_maybe_type_expr(m::Module, @nospecialize(ex))
+
+Check if the expression `ex` evaluates to a `Maybe{T}`.
+"""
 function is_maybe_type_expr(m::Module, @nospecialize(ex))
     if isdefined(m, :Maybe) && (getfield(m, :Maybe) === Maybe)
         _is_maybe_type_expr(ex) && return true
@@ -234,8 +261,6 @@ function codegen_field_default(def::JLKwStruct)
     ret = JLIfElse()
     ret.otherwise = err
 
-    isconst = Dict{Symbol,Bool}()
-    default = Dict{Symbol,Any}()
     prev_field_names = Symbol[]
 
     for (k, field) in enumerate(def.fields)
@@ -296,9 +321,20 @@ end
 Generate type alias method [`type_alias`](@ref).
 """
 function codegen_type_alias(def::JLKwStruct)
-    quote
+    @gensym TYPE_ALIAS_MAP
+    ret = quote
+        const $TYPE_ALIAS_MAP = Dict{String, Any}()
+        $Configurations.get_type_alias_map(::Type{<:$(def.name)}) = $TYPE_ALIAS_MAP
+
+        # the type can only be a concrete type if it has alias
+        # if the type is not concrete we will return nothing
         $Configurations.type_alias(::Type{<:$(def.name)}) = $(def.typealias)
     end
+
+    if !(def.typealias === nothing)
+        push!(ret.args, :($TYPE_ALIAS_MAP[$(def.typealias)] = $(def.name)))
+    end
+    return ret
 end
 
 """
@@ -310,6 +346,11 @@ function codegen_create(def::JLKwStruct)
     return codegen_ast_kwfn(def, :($Configurations.create))
 end
 
+"""
+    codegen_from_dict_specialize(def::JLKwStruct)
+
+Generate the specialized `from_dict` for the given definition.
+"""
 function codegen_from_dict_specialize(def::JLKwStruct)
     quote
         @generated function $Configurations.from_dict_specialize(
@@ -317,5 +358,23 @@ function codegen_from_dict_specialize(def::JLKwStruct)
         ) where {T<:$(def.name)}
             return $Configurations.from_dict_generated(T, :d)
         end
+    end
+end
+
+"""
+    @type_alias <type> <name::String>
+
+Define a type alias for option type `type`. The corresponding
+`type` must be a concrete type in order to map this Julia type
+to a human readable markup language (e.g TOML, YAML, etc.).
+"""
+macro type_alias(type, name::String)
+    esc(type_alias_m(type, name))
+end
+
+function type_alias_m(type, name::String)
+    quote
+        $Configurations.type_alias(::Type{$type}) = $name
+        $Configurations.set_type_alias($type, $name)
     end
 end

@@ -21,22 +21,23 @@ function field_defaults(::Type{T}) where {T}
     return Any[field_default(T, each) for each in fieldnames(T)]
 end
 
-# """
-#     field_alias(::Type{T}, name::Symbol) where {T}
-
-# Return field name alias of given option types.
-# """
-# function field_alias(::Type{T}, name::Symbol) where {T}
-#     error("field_alias is not defined for $T, it may not be an option type")
-# end
-
 """
     type_alias(::Type{OptionType}) -> String
 
 Return the alias name of given `OptionType`.
 """
 function type_alias(::Type{T}) where {T}
-    return error("type alias is not defined $T, it may not be an option type")
+    is_option(T) || error("$T is not an option type")
+    return error("`type_alias` is not defined for $T, it may not be an option type")
 end
 
-@deprecate alias(T) type_alias(T)
+function set_type_alias(::Type{T}, name::String) where {T}
+    isconcretetype(T) || error("cannot set alias for non concrete type")
+    type_alias_map = get_type_alias_map(T)::Dict{String, Any}
+    type_alias_map[name] = T
+    return
+end
+
+function get_type_alias_map(::Type{T}) where {T}
+    error("`get_type_alias_map` is not defined for `$T`, it may not be an option type")
+end
