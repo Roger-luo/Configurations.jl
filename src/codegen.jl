@@ -89,7 +89,7 @@ end
 Validate the option definition.
 """
 function validate_option_def(mod::Module, def::JLKwStruct)
-    if def.typealias === nothing
+    if def.typealias !== nothing
         isempty(def.typevars) ||
             throw(ArgumentError(
                 "only concrete type definition can have type alias"
@@ -321,9 +321,20 @@ end
 Generate type alias method [`type_alias`](@ref).
 """
 function codegen_type_alias(def::JLKwStruct)
-    quote
+    @gensym TYPE_ALIAS_MAP
+    ret = quote
+        const $TYPE_ALIAS_MAP = Dict{String, Any}()
+        $Configurations.get_type_alias_map(::Type{<:$(def.name)}) = $TYPE_ALIAS_MAP
+
+        # the type can only be a concrete type if it has alias
+        # if the type is not concrete we will return nothing
         $Configurations.type_alias(::Type{<:$(def.name)}) = $(def.typealias)
     end
+
+    if !(def.typealias === nothing)
+        push!(ret.args, :($TYPE_ALIAS_MAP[$(def.typealias)] = $(def.name)))
+    end
+    return ret
 end
 
 """
@@ -347,5 +358,23 @@ function codegen_from_dict_specialize(def::JLKwStruct)
         ) where {T<:$(def.name)}
             return $Configurations.from_dict_generated(T, :d)
         end
+    end
+end
+
+"""
+    @type_alias <type> <name::String>
+
+Define a type alias for option type `type`. The corresponding
+`type` must be a concrete type in order to map this Julia type
+to a human readable markup language (e.g TOML, YAML, etc.).
+"""
+macro type_alias(type, name::String)
+    esc(type_alias_m(type, name))
+end
+
+function type_alias_m(type, name::String)
+    quote
+        $Configurations.type_alias(::Type{$type}) = $name
+        $Configurations.set_type_alias($type, $name)
     end
 end

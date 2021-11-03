@@ -6,7 +6,6 @@ using Configurations:
     to_dict,
     from_kwargs,
     from_dict,
-    alias,
     from_toml,
     no_default,
     field_defaults,

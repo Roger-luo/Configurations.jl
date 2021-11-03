@@ -187,7 +187,7 @@ function from_dict_union_type_dynamic(
                     if alias == value[reflect_key] # find alias in reflect
                         return from_dict(T, value)
                     else
-                        type = tryparse_jltype(value[reflect_key])
+                        type = tryparse_jltype(value[reflect_key], get_type_alias_map(OptionType))
                         type === nothing && continue
                         # NOTE: type is always more specialized
                         type <: T && return from_dict(type, value)
@@ -317,16 +317,17 @@ function from_dict_generated(
     elseif f_type <: Reflect # check if the reflect value match current type
         msg = "type mismatch, expect $option_type got"
         alias = type_alias(option_type)
+        alias_map = get_type_alias_map(option_type)
         if alias === nothing
             quote
-                $Configurations.parse_jltype($field_value) <: $option_type ||
+                $Configurations.parse_jltype($field_value, $alias_map) <: $option_type ||
                     throw(ArgumentError($msg * " $($field_value)"))
                 Reflect()
             end
         else
             quote
                 $field_value == $alias ||
-                    $Configurations.parse_jltype($field_value) <: $option_type ||
+                    $Configurations.parse_jltype($field_value, $alias_map) <: $option_type ||
                     throw(ArgumentError($msg * " $($field_value)"))
                 Reflect()
             end
@@ -429,10 +430,8 @@ function alias_map(types::Vector{Any})
     d = Dict{String,Any}()
     for t in types
         if is_option(t)
-            alias = type_alias(t)
-            if alias !== nothing
-                d[alias] = t
-            end
+            alias_map = get_type_alias_map(t)::Dict{String, Any}
+            merge!(d, alias_map)
         end
     end
     return d
