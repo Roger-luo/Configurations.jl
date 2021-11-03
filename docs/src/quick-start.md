@@ -144,6 +144,24 @@ julia> to_toml(option)
 
 Or serialize it to other format from `OrderedDict`.
 
+## The Reflect Type
+
+One can use `Reflect` type to denote a field contains the type information of the struct.
+
+```@docs
+Reflect
+```
+
+This is useful when you have a few different option type for one field, e.g
+
+```julia
+@option struct Option
+   field::Union{OptionA, OptionB, OptionC}
+end
+```
+
+the type information of different type will be embeded in the corresponding string
+of the `Reflect` field.
 ## Create pretty printing for your option type
 
 One can overload the `Base.show` method to create your own pretty printing. However, if you are fine with
