@@ -233,7 +233,9 @@ function assert_duplicated_alias_union(::Type{UnionType}) where {UnionType}
             alias = type_alias(T)
             if alias !== nothing
                 alias in set && throw(DuplicatedAliasError(alias))
-                push!(set, alias)alias
+                push!(set, alias)
+            end
+        end
     end
     return nothing
 end
