@@ -78,7 +78,7 @@ end
 to_dict(x::Type, ::ToDictOption) = error("$x is not an option type")
 
 """
-    to_dict(::Type{T}, x, option::ConvertOption) where T
+    to_dict(::Type{T}, x, option::ToDictOption) where T
 
 Convert `x` when `x` is inside an option type `T`. `option`
 is a set of options to determine the conversion behaviour. this can
@@ -94,7 +94,7 @@ contain an option type for convenience.
 The following is a builtin overload to handle list of options.
 
 ```julia
-function Configurations.to_dict(::Type{T}, x::Vector, option::ConvertOption) where T
+function Configurations.to_dict(::Type{T}, x::Vector, option::ToDictOption) where T
     if is_option(eltype(x))
         return map(p->to_dict(T, p, include_defaults), x)
     else

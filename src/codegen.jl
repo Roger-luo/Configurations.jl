@@ -5,6 +5,14 @@ Define an option struct type. This will auto-generate methods that parse a given
 object (the keys must be of type `String`) into an instance of the struct type you defined. One
 can use `alias` string to distinguish multiple possible option type for the same field.
 
+# Special Types
+
+- `Maybe{T}`: this type is equivalent to `Union{Nothing, T}` and
+    is treated specially in `@option`, it will always have a default
+    value of `nothing` if not specified.
+- [`Reflect`](@ref): this type is treated specially to allow one to use a field
+    to store the corresponding type information.
+
 !!! compat "Configurations 0.16"
     from v0.16.0 Configurations stops overloading the `Base.show` method for you,
     if you need pretty printing of your option types, consider overloading
@@ -31,8 +39,6 @@ julia> "Option B"
            opt::OptionA = OptionA(;name = "Sam")
            float::Float64 = 0.3
        end
-```
-OptionC{Float32}
 julia> option = from_dict(OptionB, d)
 OptionB(;
     opt = OptionA(;
