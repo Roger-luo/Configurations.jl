@@ -43,6 +43,7 @@ include("types.jl")
 include("convert.jl")
 include("reflection.jl")
 include("utils.jl")
+include("traits.jl")
 include("codegen.jl")
 
 include("from_dict.jl")
