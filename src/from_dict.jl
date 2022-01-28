@@ -112,6 +112,8 @@ function from_dict(::Type{OptionType}, ::OptionField{f_name}, ::Type{T}, x
     catch err
         if err isa MethodError && err.f === convert
             throw(FieldTypeConversionError(typeof(x), f_name, T, OptionType))
+        else 
+            throw(err)
         end
     end
 end
