@@ -54,3 +54,27 @@ function Base.showerror(io::IO, err::DuplicatedFieldError)
     printstyled(io, err.type; color=:green)
     return print(io, " and its sub-fields")
 end
+
+"""
+    FieldTypeConversionError(type, fieldname, fieldtype, optiontype)
+
+A conversion from `type` to `fieldtype` belonging to `fieldname` in an `optiontype` failed.
+"""
+struct FieldTypeConversionError <: Exception
+    type
+    fieldname::Symbol
+    fieldtype
+    optiontype
+end
+
+function Base.showerror(io::IO, err::FieldTypeConversionError)
+    print(io, "FieldTypeConversionError: conversion from ")
+    printstyled(io, err.type; color=:red)
+    print(io, " to type ")
+    printstyled(io, err.fieldtype; color=:green)
+    print(io, " for field ")
+    printstyled(io, err.fieldname; color=:light_blue)
+    print(io, " in type ")
+    printstyled(io, err.optiontype; color=:green)
+    return print(io, " failed")
+end

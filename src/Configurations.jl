@@ -33,6 +33,7 @@ export @option,
     DuplicatedFieldError,
     DuplicatedAliasError,
     InvalidKeyError,
+    FieldTypeConversionError,
     TOMLStyle,
     YAMLStyle,
     JSONStyle

@@ -295,7 +295,7 @@ end
         ),
     )
 
-    @test_throws MethodError from_dict(Ion, d)
+    @test_throws FieldTypeConversionError from_dict(Ion, d)
 
     function Configurations.convert_to_option(
         ::Type{Julia}, ::Type{Dict{VersionNumber,String}}, x::Dict{String,String}
@@ -531,6 +531,15 @@ end
 
 @testset "duplicated field check" begin
     @test_throws Configurations.DuplicatedFieldError field_keywords(DuplicatedFields)
+end
+
+@option struct WrongFieldTypeConversion
+    str::String
+end
+
+@testset "catch field type conversion error" begin
+    d = Dict("str"=>:symbol)
+    @test_throws FieldTypeConversionError from_dict(WrongFieldTypeConversion, d)
 end
 
 @test_throws ErrorException Configurations.create(Float64; name="abc")
