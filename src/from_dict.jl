@@ -100,22 +100,34 @@ struct OptionField{name} end
 OptionField(name::Symbol) = OptionField{name}()
 
 """
+    _from_dict_errorhandled(::Type{OptionType}, optionfield::OptionField{f_name}, ::Type{T}, x)
+
+Raise `FieldTypeConversionError`s errors if `from_dict` or `Base.convert` raise exceptions
+```
+ERROR: MethodError: Cannot `convert` an object of type ...
+```
+"""
+function _from_dict_errorhandled(::Type{OptionType}, optionfield::OptionField{f_name}, ::Type{T}, x
+        ) where {OptionType,f_name, T}
+    try
+        return from_dict(OptionType, optionfield, T, x)
+    catch err
+        if err isa MethodError && err.f === convert
+            throw(FieldTypeConversionError(typeof(x), f_name, T, OptionType))
+        else
+            throw(err)
+        end
+    end
+end
+
+"""
     from_dict(::Type{OptionType}, ::OptionField{f_name}, ::Type{T}, x) where {OptionType, f_name, T}
 
 For option type `OptionType`, convert the object `x` to the field type `T` and assign it to the field
 `f_name`.
 """
-function from_dict(::Type{OptionType}, ::OptionField{f_name}, ::Type{T}, x
-        ) where {OptionType,f_name, T}
-    try
-        return from_dict(OptionType, T, x)
-    catch err
-        if err isa MethodError && err.f === convert
-            throw(FieldTypeConversionError(typeof(x), f_name, T, OptionType))
-        else 
-            throw(err)
-        end
-    end
+function from_dict(::Type{OptionType}, ::OptionField, ::Type{T}, x) where {OptionType,T}
+    return from_dict(OptionType, T, x)
 end
 
 function from_dict(
@@ -170,7 +182,7 @@ end
 function from_dict_union_type_dynamic(
     ::Type{OptionType}, of::OptionField{f_name}, ::Type{FieldType}, value
 ) where {OptionType,f_name,FieldType}
-    FieldType isa Union || return from_dict(OptionType, of, FieldType, value)
+    FieldType isa Union || return _from_dict_errorhandled(OptionType, of, FieldType, value)
     assert_duplicated_alias_union(FieldType)
 
     types = Base.uniontypes(FieldType)
@@ -178,7 +190,7 @@ function from_dict_union_type_dynamic(
         value === nothing && return nothing # happy path
         types = filter(x -> x !== Nothing, types)
         if length(types) == 1
-            return from_dict(OptionType, of, types[1], value)
+            return _from_dict_errorhandled(OptionType, of, types[1], value)
         end
     end
 
@@ -215,7 +227,7 @@ function from_dict_union_type_dynamic(
             end
         else
             try
-                return from_dict(OptionType, of, T, value)
+                return _from_dict_errorhandled(OptionType, of, T, value)
             catch
                 continue
             end
@@ -349,7 +361,7 @@ function from_dict_generated(
         end
     else
         quote
-            $Configurations.from_dict($option_type, $of, $f_type, $field_value)
+            $Configurations._from_dict_errorhandled($option_type, $of, $f_type, $field_value)
         end
     end
 end
