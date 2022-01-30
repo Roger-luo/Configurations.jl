@@ -67,7 +67,7 @@ end
 end
 
 # overload from_dict for field str such that it produces a MethodError 'convert failed' error
-# intentionally which should be caught by FieldTypeConversionError exception
+# this won't be caught by FieldTypeConversion error!
 function Configurations.from_dict(::Type{FieldTypeConversionStruct_errornous_from_dict_overload}, 
         ::OptionField{:str}, ::Type{T}, x) where {T}
     return convert(T, Symbol(x)) # will fail, because T will be String
@@ -149,7 +149,7 @@ end
         d = Dict("str"=>:symbol)
         @test_throws FieldTypeConversionError from_dict(FieldTypeConversionStruct, d)
         d = Dict("str"=>"symbol")
-        @test_throws FieldTypeConversionError from_dict(
+        @test_throws MethodError from_dict(
                         FieldTypeConversionStruct_errornous_from_dict_overload, d)
     end
 end
