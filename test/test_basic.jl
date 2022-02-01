@@ -83,6 +83,7 @@ end
     showerror(stdout, InvalidKeyError(:name, [Symbol(:a, idx) for idx in 1:10]))
     showerror(stdout, DuplicatedFieldError(:name, OptionA))
     showerror(stdout, DuplicatedAliasError("alias"))
+    showerror(stdout, FieldTypeConversionError(Float64, :field, String, OptionA))
 end
 
 @testset "options" begin
