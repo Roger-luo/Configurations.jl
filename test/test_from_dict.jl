@@ -58,6 +58,22 @@ end
     }
 end
 
+@option struct FieldTypeConversionStruct
+    str::String
+end
+
+@option struct FieldTypeConversionStruct_errornous_from_dict_overload
+    str::String
+end
+
+# overload from_dict for field str such that it produces a MethodError 'convert failed' error
+# this won't be caught by FieldTypeConversion error!
+function Configurations.from_dict(::Type{FieldTypeConversionStruct_errornous_from_dict_overload}, 
+        ::Type{T}, x) where {T}
+    @assert false "Some artificial conversion error"
+    return
+end
+
 @testset "from_dict" begin
     @testset "ignore_extra" begin
         d = Dict{String, Any}(
@@ -128,6 +144,13 @@ end
                 TestUnionType, OptionField(field), type, d[string(field)]
             ) == getfield(option, field)
         end
+    end
+
+    @testset "catch field type conversion error" begin
+        d = Dict("str"=>:symbol)
+        @test_throws FieldTypeConversionError from_dict(FieldTypeConversionStruct, d)
+        d = Dict("str"=>"symbol")
+        @test_throws Exception from_dict(FieldTypeConversionStruct_errornous_from_dict_overload, d)
     end
 end
 

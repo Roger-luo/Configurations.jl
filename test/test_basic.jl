@@ -83,6 +83,7 @@ end
     showerror(stdout, InvalidKeyError(:name, [Symbol(:a, idx) for idx in 1:10]))
     showerror(stdout, DuplicatedFieldError(:name, OptionA))
     showerror(stdout, DuplicatedAliasError("alias"))
+    showerror(stdout, FieldTypeConversionError(Float64, :field, String, OptionA))
 end
 
 @testset "options" begin
@@ -295,7 +296,8 @@ end
         ),
     )
 
-    @test_throws MethodError from_dict(Ion, d)
+    # @test_throws MethodError from_dict(Ion, d)
+    @test_throws FieldTypeConversionError from_dict(Ion, d)
 
     function Configurations.convert_to_option(
         ::Type{Julia}, ::Type{Dict{VersionNumber,String}}, x::Dict{String,String}

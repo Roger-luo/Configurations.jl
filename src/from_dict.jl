@@ -104,9 +104,22 @@ OptionField(name::Symbol) = OptionField{name}()
 
 For option type `OptionType`, convert the object `x` to the field type `T` and assign it to the field
 `f_name`.
+Raise `FieldTypeConversionError`s errors if `Base.convert` raises exception
+```
+ERROR: MethodError: Cannot `convert` an object of type ...
+```
 """
-function from_dict(::Type{OptionType}, ::OptionField, ::Type{T}, x) where {OptionType,T}
-    return from_dict(OptionType, T, x)
+function from_dict(::Type{OptionType}, optionfield::OptionField{f_name}, ::Type{T}, x
+      ) where {OptionType,f_name,T}
+    try
+        return from_dict(OptionType, T, x)
+    catch err
+        if err isa MethodError && err.f === convert
+            throw(FieldTypeConversionError(typeof(x), f_name, T, OptionType))
+        else
+            throw(err)
+        end
+    end
 end
 
 function from_dict(
