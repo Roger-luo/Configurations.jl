@@ -283,7 +283,7 @@ function from_dict_generated(::Type{OptionType}, value::Symbol) where {OptionTyp
         f_type = fieldtype(OptionType, f_idx)
         f_default = field_default(OptionType, f_name)
 
-        var = gensym(f_name)
+        var = f_name
         key = string(f_name)
         field_value = gensym(:field_value)
         push!(construct.args, var)
@@ -292,6 +292,8 @@ function from_dict_generated(::Type{OptionType}, value::Symbol) where {OptionTyp
 
         if f_default === no_default
             jl[:(!haskey($value, $key))] = :(error("expect key: $key"))
+        elseif f_default isa PartialDefault
+            jl[:(!haskey($value, $key))] = :($var = $(f_default.lambda)($(f_default.vars...)))
         else
             jl[:(!haskey($value, $key))] = :($var = $f_default)
         end
