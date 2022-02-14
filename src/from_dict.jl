@@ -46,11 +46,7 @@ function from_dict(::Type{OptionType}, d::AbstractDict{String}; kw...) where {Op
     return from_dict_specialize(OptionType, d)
 end
 
-"""
-    from_dict(::Type{T}, t::T) where {T}
-
-An already-parsed option should be kept in nested parsing.
-"""
+# An already-parsed option should be kept in nested parsing.
 from_dict(::Type{T}, t::T) where {T} = t
 
 """
