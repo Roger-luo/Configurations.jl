@@ -46,6 +46,9 @@ function from_dict(::Type{OptionType}, d::AbstractDict{String}; kw...) where {Op
     return from_dict_specialize(OptionType, d)
 end
 
+# An already-parsed option should be kept in nested parsing.
+from_dict(::Type{T}, t::T) where {T} = t
+
 """
     ignore_extra(option_type) -> Bool
 
@@ -326,8 +329,8 @@ function from_dict_generated(
 )
     if is_option(f_type)
         quote
-            $field_value isa AbstractDict ||
-                error("expect an AbstractDict, got $(typeof($field_value))")
+            $field_value isa AbstractDict || $field_value isa $f_type ||
+                error("expect an AbstractDict or $($f_type), got $(typeof($field_value))")
             # NOTE: we want to allow user overloaded from_dict here
             # thus we don't use $(from_dict_generated(f_type, value))
             $Configurations.from_dict($f_type, $field_value)

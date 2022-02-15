@@ -45,6 +45,14 @@ end
     y::Int = 1
 end
 
+@option struct TestNestedOption
+    a::OptionAliasA
+end
+
+@option struct TestNestedOptionVec
+    a::Vector{OptionAliasA}
+end
+
 @option struct TestUnionType
     maybe_reflect::Maybe{OptionReflectA}
     maybe_alias::Maybe{OptionAliasA}
@@ -83,6 +91,21 @@ end
         )
         @test_throws InvalidKeyError from_dict(OptionAliasA, d)
         @test from_dict(IgnoreExtra, d) == IgnoreExtra()
+    end
+
+    @testset "test nested type" begin
+        a = from_dict(OptionAliasA, Dict{String, Any}(
+            "x" => 1,
+            "y" => 2,
+        ))
+
+        @test from_dict(TestNestedOption, Dict{String, Any}(
+            "a" => a,
+        )) == TestNestedOption(a)
+
+        @test from_dict(TestNestedOptionVec, Dict{String, Any}(
+            "a" => [a],
+        )) == TestNestedOptionVec([a])
     end
 
     @testset "test maybe union type" begin
