@@ -268,3 +268,37 @@ function to_toml(x; sorted::Bool=false, by=identity, kw...)
         to_toml(io, x; sorted=sorted, by=by, kw...)
     end
 end
+
+"""
+    to_json(io::IO, option; indent=nothing, kw...)
+
+Convert an instance `option` of option type to JSON and write it to `IO`. See [`to_dict`](@ref)
+for other valid keyword options. See also `JSON.print`.
+"""
+function to_json(io::IO, x; indent::Union{Nothing, Integer} = nothing, kw...)
+    is_option(x) || error("argument is not an option type")
+    d = to_dict(x; exclude_nothing=false, kw...)
+    return isnothing(indent) ? JSON.print(io, d) : JSON.print(io, d, indent)
+end
+
+"""
+    to_json(x; indent=nothing, kw...)
+
+Convert an instance `x` of option type to JSON and write it to `String`. See also `JSON.print`.
+"""
+function to_json(x; indent::Union{Nothing, Integer} = nothing, kw...)
+    return sprint(x) do io, x
+        to_json(io, x; indent, kw...)
+    end
+end
+
+"""
+    to_json(filename::String, option, indent; kw...)
+
+Convert an instance `option` of option type to TOML and write it to `filename`. See also `TOML.print`.
+"""
+function to_json(filename::String, x; indent::Union{Nothing, Integer} = nothing, kw...)
+    open(filename, "w+") do io
+        to_json(io, x; indent, kw...)
+    end
+end

@@ -3,10 +3,6 @@ module Basic
 using Configurations
 using ExproniconLite
 using Configurations:
-    to_dict,
-    from_kwargs,
-    from_dict,
-    from_toml,
     no_default,
     field_defaults,
     field_default,
@@ -94,6 +90,12 @@ end
     @test from_toml_if_exists(
         OptionB, "not_exist.toml"; opt_name="Roger", opt_int=2, float=0.33
     ) == option
+
+    @test from_json(OptionB, "option.json") == option
+    @test from_json_if_exists(OptionB, "option.json") == option
+    @test from_json_if_exists(
+        OptionB, "not_exist.json"; opt_name="Roger", opt_int=2, float=0.33
+    ) == option
 end
 
 @testset "to_dict" begin
@@ -116,6 +118,21 @@ end
     @test to_toml(option3; include_defaults=false) == "[opt]\nname = \"Roger\"\nint = 2\n"
     @test to_toml(option3; include_defaults=true) ==
           "float = 0.3\n\n[opt]\nname = \"Roger\"\nint = 2\n"
+end
+
+@testset "to_json" begin
+    @test to_json(option; include_defaults=false) ==
+          "{\"opt\":{\"name\":\"Roger\",\"int\":2},\"float\":0.33}"
+    to_json("test.json", option; indent = 2, include_defaults=false)
+    @test read("test.json", String) == 
+          "{\n  \"opt\": {\n    \"name\": \"Roger\",\n    \"int\": 2\n  },\n  \"float\": 0.33\n}\n"
+    @test to_json(option3; include_defaults=false) == "{\"opt\":{\"name\":\"Roger\",\"int\":2}}"
+    @test to_json(option3; include_defaults=true) ==
+          "{\"opt\":{\"name\":\"Roger\",\"int\":2},\"float\":0.3}"
+    @test to_json(option3; indent = 0, include_defaults=true) == 
+          "{\n\"opt\": {\n\"name\": \"Roger\",\n\"int\": 2\n},\n\"float\": 0.3\n}\n"
+    @test to_json(option3; indent = 4, include_defaults=true) == 
+          "{\n    \"opt\": {\n        \"name\": \"Roger\",\n        \"int\": 2\n    },\n    \"float\": 0.3\n}\n"
 end
 
 @testset "default reflection" begin

@@ -1,17 +1,12 @@
 module Configurations
 
+using JSON
 using TOML
 using ExproniconLite
 using OrderedCollections
 
 export @option,
     @type_alias,
-    # main interface
-    from_dict,
-    from_kwargs,
-    from_toml,
-    to_dict,
-    to_toml,
     # builtin types
     no_default,
     Maybe,
@@ -28,8 +23,12 @@ export @option,
     from_kwargs,
     from_toml,
     from_toml_if_exists,
+    from_json,
+    from_json_if_exists,
     # serialize
     to_dict,
+    to_toml,
+    to_json,
     DuplicatedFieldError,
     DuplicatedAliasError,
     InvalidKeyError,
@@ -49,6 +48,7 @@ include("codegen.jl")
 include("from_dict.jl")
 include("from_kwargs.jl")
 include("from_toml.jl")
+include("from_json.jl")
 # include("parse.jl")
 include("serialize.jl")
 
