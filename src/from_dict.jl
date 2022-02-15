@@ -294,7 +294,8 @@ function from_dict_generated(::Type{OptionType}, value::Symbol) where {OptionTyp
         jl = JLIfElse()
 
         if f_default === no_default
-            jl[:(!haskey($value, $key))] = :(error("expect key: $key"))
+            err_msg = "expect key: $key"
+            jl[:(!haskey($value, $key))] = :(error($err_msg))
         elseif f_default isa PartialDefault
             jl[:(!haskey($value, $key))] = :($var = $(f_default.lambda)($(f_default.vars...)))
         else
@@ -302,7 +303,17 @@ function from_dict_generated(::Type{OptionType}, value::Symbol) where {OptionTyp
         end
 
         body = from_dict_generated(OptionType, OptionField(f_name), f_type, field_value)
-        if f_default === nothing
+        # Maybe{option} type wants to treat empty dict
+        # as all default value
+        types = Base.uniontypes(f_type)
+        types = filter(x -> x !== Nothing, types)
+        
+        if f_default === nothing && length(types) == 1 && is_option(types[1])
+            jl.otherwise = quote
+                $field_value = $value[$key]
+                $var = $body
+            end
+        elseif f_default === nothing
             jl.otherwise = quote
                 $field_value = $value[$key]
                 if $field_value isa AbstractDict && isempty($field_value)

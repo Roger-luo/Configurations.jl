@@ -123,6 +123,27 @@ end
                 Dict{String,Any}("option_a" => Dict{String,Any}("x" => 1, "y" => 2)),
         )
         option = TestUnionType(;
+            maybe_reflect=OptionReflectA(),
+            maybe_alias=OptionAliasA(),
+            union_of_alias=OptionAliasB(),
+            union_of_reflects=OptionReflectC(),
+            totally_mixed=OptionReflectB(),
+            maybe_totally_mixed=OptionAliasA(),
+        )
+        @test from_dict(TestUnionType, d) == option
+
+        d = Dict{String,Any}(
+            "union_of_alias" => Dict{String,Any}("option_b" => Dict{String,Any}("x" => 1)),
+            "union_of_reflects" =>
+                Dict{String,Any}("type" => "Main.TestFromDict.OptionReflectC", "y" => 1),
+            "maybe_of_alias" => nothing,
+            "maybe_of_reflects" => nothing,
+            "totally_mixed" =>
+                Dict{String,Any}("type" => "Main.TestFromDict.OptionReflectB", "x" => 1),
+            "maybe_totally_mixed" =>
+                Dict{String,Any}("option_a" => Dict{String,Any}("x" => 1, "y" => 2)),
+        )
+        option = TestUnionType(;
             union_of_alias=OptionAliasB(),
             union_of_reflects=OptionReflectC(),
             totally_mixed=OptionReflectB(),
