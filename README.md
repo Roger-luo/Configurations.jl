@@ -84,7 +84,7 @@ MIT License
 [docs-dev-url]: https://Roger-luo.github.io/Configurations.jl/dev/
 [docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
 [docs-stable-url]: https://Roger-luo.github.io/Configurations.jl/stable
-[aqua-img]: https://img.shields.io/badge/Aqua.jl-%F0%9F%8C%A2-aqua.svg
+[aqua-img]: https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg
 [aqua-url]: https://github.com/JuliaTesting/Aqua.jl
 [downloads-img]:https://shields.io/endpoint?url=https://pkgs.genieframework.com/api/v1/badge/Configurations
 [downloads-url]:https://pkgs.genieframework.com?packages=Configurations
