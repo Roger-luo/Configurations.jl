@@ -45,6 +45,14 @@ end
     y::Int = 1
 end
 
+@option struct TestNestedOption
+    a::OptionAliasA
+end
+
+@option struct TestNestedOptionVec
+    a::Vector{OptionAliasA}
+end
+
 @option struct TestUnionType
     maybe_reflect::Maybe{OptionReflectA}
     maybe_alias::Maybe{OptionAliasA}
@@ -58,6 +66,22 @@ end
     }
 end
 
+@option struct FieldTypeConversionStruct
+    str::String
+end
+
+@option struct FieldTypeConversionStruct_errornous_from_dict_overload
+    str::String
+end
+
+# overload from_dict for field str such that it produces a MethodError 'convert failed' error
+# this won't be caught by FieldTypeConversion error!
+function Configurations.from_dict(::Type{FieldTypeConversionStruct_errornous_from_dict_overload}, 
+        ::Type{T}, x) where {T}
+    @assert false "Some artificial conversion error"
+    return
+end
+
 @testset "from_dict" begin
     @testset "ignore_extra" begin
         d = Dict{String, Any}(
@@ -69,10 +93,46 @@ end
         @test from_dict(IgnoreExtra, d) == IgnoreExtra()
     end
 
+    @testset "test nested type" begin
+        a = from_dict(OptionAliasA, Dict{String, Any}(
+            "x" => 1,
+            "y" => 2,
+        ))
+
+        @test from_dict(TestNestedOption, Dict{String, Any}(
+            "a" => a,
+        )) == TestNestedOption(a)
+
+        @test from_dict(TestNestedOptionVec, Dict{String, Any}(
+            "a" => [a],
+        )) == TestNestedOptionVec([a])
+    end
+
     @testset "test maybe union type" begin
         d = Dict{String,Any}(
             "maybe_reflect" => Dict{String,Any}(),
             "maybe_alias" => Dict{String,Any}(),
+            "union_of_alias" => Dict{String,Any}("option_b" => Dict{String,Any}("x" => 1)),
+            "union_of_reflects" =>
+                Dict{String,Any}("type" => "Main.TestFromDict.OptionReflectC", "y" => 1),
+            "maybe_of_alias" => nothing,
+            "maybe_of_reflects" => nothing,
+            "totally_mixed" =>
+                Dict{String,Any}("type" => "Main.TestFromDict.OptionReflectB", "x" => 1),
+            "maybe_totally_mixed" =>
+                Dict{String,Any}("option_a" => Dict{String,Any}("x" => 1, "y" => 2)),
+        )
+        option = TestUnionType(;
+            maybe_reflect=OptionReflectA(),
+            maybe_alias=OptionAliasA(),
+            union_of_alias=OptionAliasB(),
+            union_of_reflects=OptionReflectC(),
+            totally_mixed=OptionReflectB(),
+            maybe_totally_mixed=OptionAliasA(),
+        )
+        @test from_dict(TestUnionType, d) == option
+
+        d = Dict{String,Any}(
             "union_of_alias" => Dict{String,Any}("option_b" => Dict{String,Any}("x" => 1)),
             "union_of_reflects" =>
                 Dict{String,Any}("type" => "Main.TestFromDict.OptionReflectC", "y" => 1),
@@ -128,6 +188,13 @@ end
                 TestUnionType, OptionField(field), type, d[string(field)]
             ) == getfield(option, field)
         end
+    end
+
+    @testset "catch field type conversion error" begin
+        d = Dict("str"=>:symbol)
+        @test_throws FieldTypeConversionError from_dict(FieldTypeConversionStruct, d)
+        d = Dict("str"=>"symbol")
+        @test_throws Exception from_dict(FieldTypeConversionStruct_errornous_from_dict_overload, d)
     end
 end
 

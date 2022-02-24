@@ -46,6 +46,9 @@ function from_dict(::Type{OptionType}, d::AbstractDict{String}; kw...) where {Op
     return from_dict_specialize(OptionType, d)
 end
 
+# An already-parsed option should be kept in nested parsing.
+from_dict(::Type{T}, t::T) where {T} = t
+
 """
     ignore_extra(option_type) -> Bool
 
@@ -104,9 +107,22 @@ OptionField(name::Symbol) = OptionField{name}()
 
 For option type `OptionType`, convert the object `x` to the field type `T` and assign it to the field
 `f_name`.
+Raise `FieldTypeConversionError`s errors if `Base.convert` raises exception
+```
+ERROR: MethodError: Cannot `convert` an object of type ...
+```
 """
-function from_dict(::Type{OptionType}, ::OptionField, ::Type{T}, x) where {OptionType,T}
-    return from_dict(OptionType, T, x)
+function from_dict(::Type{OptionType}, optionfield::OptionField{f_name}, ::Type{T}, x
+      ) where {OptionType,f_name,T}
+    try
+        return from_dict(OptionType, T, x)
+    catch err
+        if err isa MethodError && err.f === convert
+            throw(FieldTypeConversionError(typeof(x), f_name, T, OptionType))
+        else
+            throw(err)
+        end
+    end
 end
 
 function from_dict(
@@ -270,7 +286,7 @@ function from_dict_generated(::Type{OptionType}, value::Symbol) where {OptionTyp
         f_type = fieldtype(OptionType, f_idx)
         f_default = field_default(OptionType, f_name)
 
-        var = gensym(f_name)
+        var = f_name
         key = string(f_name)
         field_value = gensym(:field_value)
         push!(construct.args, var)
@@ -278,13 +294,26 @@ function from_dict_generated(::Type{OptionType}, value::Symbol) where {OptionTyp
         jl = JLIfElse()
 
         if f_default === no_default
-            jl[:(!haskey($value, $key))] = :(error("expect key: $key"))
+            err_msg = "expect key: $key"
+            jl[:(!haskey($value, $key))] = :(error($err_msg))
+        elseif f_default isa PartialDefault
+            jl[:(!haskey($value, $key))] = :($var = $(f_default.lambda)($(f_default.vars...)))
         else
             jl[:(!haskey($value, $key))] = :($var = $f_default)
         end
 
         body = from_dict_generated(OptionType, OptionField(f_name), f_type, field_value)
-        if f_default === nothing
+        # Maybe{option} type wants to treat empty dict
+        # as all default value
+        types = Base.uniontypes(f_type)
+        types = filter(x -> x !== Nothing, types)
+        
+        if f_default === nothing && length(types) == 1 && is_option(types[1])
+            jl.otherwise = quote
+                $field_value = $value[$key]
+                $var = $body
+            end
+        elseif f_default === nothing
             jl.otherwise = quote
                 $field_value = $value[$key]
                 if $field_value isa AbstractDict && isempty($field_value)
@@ -311,8 +340,8 @@ function from_dict_generated(
 )
     if is_option(f_type)
         quote
-            $field_value isa AbstractDict ||
-                error("expect an AbstractDict, got $(typeof($field_value))")
+            $field_value isa AbstractDict || $field_value isa $f_type ||
+                error("expect an AbstractDict or $($f_type), got $(typeof($field_value))")
             # NOTE: we want to allow user overloaded from_dict here
             # thus we don't use $(from_dict_generated(f_type, value))
             $Configurations.from_dict($f_type, $field_value)
