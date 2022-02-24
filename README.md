@@ -5,6 +5,7 @@
 [![][docs-stable-img]][docs-stable-url]
 [![][docs-dev-img]][docs-dev-url]
 [![Aqua QA][aqua-img]][aqua-url]
+[![Downloads][downloads-img]][downloads-url]
 
 Configurations & Options made easy.
 
@@ -81,3 +82,5 @@ MIT License
 [docs-stable-url]: https://Roger-luo.github.io/Configurations.jl/stable
 [aqua-img]: https://img.shields.io/badge/Aqua.jl-%F0%9F%8C%A2-aqua.svg
 [aqua-url]: https://github.com/JuliaTesting/Aqua.jl
+[downloads-img]:https://shields.io/endpoint?url=https://pkgs.genieframework.com/api/v1/badge/Configurations
+[downloads-url]:https://pkgs.genieframework.com?packages=Configurations
