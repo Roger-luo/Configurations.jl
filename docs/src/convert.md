@@ -20,6 +20,8 @@ The type conversion for option types work as following:
 Thus, if `Base.convert` is already overloaded, this will just work, or if the conversion rule is contextual based
 on the option type, one can also overload [`Configurations.from_dict`](@ref), this also avoids potential type piracy.
 
+For serialization, one can overload [`Configurations.to_dict`](@ref), this 
+
 ## The Overloading Interface
 
 [`from_dict`](@ref) provides two overloading interface
@@ -27,6 +29,7 @@ on the option type, one can also overload [`Configurations.from_dict`](@ref), th
 ```@docs
 from_dict(::Type{OptionType}, ::OptionField, ::Type{T}, x) where {OptionType,T}
 from_dict(::Type{OptionType}, ::Type{T}, x) where {OptionType,T}
+to_dict(::Type{T}, x, option::ToDictOption) where T
 ```
 
 ## Example: Contextual Conversion

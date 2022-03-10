@@ -188,6 +188,29 @@ Configurations.from_kwargs
 
 A real world example is [the Pluto configuration](https://github.com/fonsp/Pluto.jl/blob/main/src/Configuration.jl#L159).
 
+## Modify Parsed Configurations
+
+In some cases, user may want to change a few entries after
+the configuration get parsed. This can be done via the keyword arguments
+of [`from_dict`](@ref) or [`from_toml`](@ref).
+
+```julia
+@option struct SubOption
+   field::Int
+end
+
+@option struct MyOption
+   option::SubOption
+end
+```
+
+by default [`from_dict`](@ref) or [`from_toml`](@ref) uses the [`from_underscore_kwargs!`](@ref)
+convention, so one can change the `field` entry in `SubOption` above via
+
+```julia
+from_dict(d; option_field=2)
+```
+
 ## Read from TOML files
 
 Configurations supports TOML file by default via the TOML standard library, you can directly read a
