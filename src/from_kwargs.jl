@@ -61,13 +61,14 @@ end
 function unsafe_from_underscore_kwargs!(
     d::AbstractDict{String}, ::Type{T}, prefix::Maybe{Symbol}=nothing; kw...
 ) where {T}
-    return foreach_keywords!(d, T) do name, type
+    foreach_keywords(T) do name, type
         key = underscore(prefix, name)
 
         from_kwargs_option_key!(d, type, name, key, kw) do field_d, field_type
             unsafe_from_underscore_kwargs!(field_d, field_type, key; kw...)
         end
     end
+    return d
 end
 
 function from_field_kwargs!(d::AbstractDict{String}, ::Type{T}; kw...) where {T}
@@ -76,11 +77,12 @@ function from_field_kwargs!(d::AbstractDict{String}, ::Type{T}; kw...) where {T}
 end
 
 function unsafe_from_field_kwargs!(d::AbstractDict{String}, ::Type{T}; kw...) where {T}
-    return foreach_keywords!(d, T) do name, type
+    foreach_keywords(T) do name, type
         from_kwargs_option_key!(d, type, name, name, kw) do field_d, field_type
             unsafe_from_field_kwargs!(field_d, field_type; kw...)
         end
     end
+    return d
 end
 
 function from_kwargs_option_key!(
@@ -136,14 +138,14 @@ function underscore_keywords(::Type{T}) where {T}
     return collect_underscore_keywords!(Symbol[], T)
 end
 
-function foreach_keywords!(f, list, ::Type{T}) where {T}
-    is_option(T) || return list
+function foreach_keywords(f, ::Type{T}) where {T}
+    is_option(T) || return
 
     for name in fieldnames(T)
         type = fieldtype(T, name)
         f(name, type)
     end
-    return list
+    return
 end
 
 function underscore(prefix::Maybe{Symbol}, name)
@@ -155,7 +157,7 @@ function underscore(prefix::Maybe{Symbol}, name)
 end
 
 function collect_field_keywords!(list::Vector{Symbol}, ::Type{Top}, ::Type{T}) where {Top,T}
-    return foreach_keywords!(list, T) do name, type
+    foreach_keywords(T) do name, type
         if is_option(type)
             collect_field_keywords!(list, Top, type)
         elseif type isa Union
@@ -169,12 +171,13 @@ function collect_field_keywords!(list::Vector{Symbol}, ::Type{Top}, ::Type{T}) w
             push!(list, name)
         end
     end
+    return list
 end
 
 function collect_underscore_keywords!(
     list::Vector{Symbol}, ::Type{T}, prefix::Maybe{Symbol}=nothing
 ) where {T}
-    return foreach_keywords!(list, T) do name, type
+    foreach_keywords(T) do name, type
         key = underscore(prefix, name)
 
         if is_option(type)
@@ -187,4 +190,5 @@ function collect_underscore_keywords!(
             push!(list, key)
         end
     end
+    return list
 end
