@@ -299,7 +299,7 @@ function from_dict_generated(::Type{OptionType}, value::Symbol) where {OptionTyp
         elseif f_default isa PartialDefault
             jl[:(!haskey($value, $key))] = :($var = $(f_default.lambda)($(f_default.vars...)))
         else
-            jl[:(!haskey($value, $key))] = :($var = $f_default)
+            jl[:(!haskey($value, $key))] = :($var = $(QuoteNode(f_default)))
         end
 
         body = from_dict_generated(OptionType, OptionField(f_name), f_type, field_value)
