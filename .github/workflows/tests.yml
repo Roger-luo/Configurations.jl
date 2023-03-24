@@ -1,9 +1,11 @@
 name: CI
 on:
-  - push
-  - pull_request
-schedule:
-  - cron: '00 01 * * *'
+  push:
+    branches:
+      - main
+  pull_request:
+  schedule:
+    - cron: '00 01 * * *'
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
