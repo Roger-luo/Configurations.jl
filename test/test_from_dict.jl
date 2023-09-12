@@ -82,6 +82,23 @@ function Configurations.from_dict(::Type{FieldTypeConversionStruct_errornous_fro
     return
 end
 
+# Used in tests for nested modules below.
+module Outer
+
+module Inner
+# Load Configurations.jl in this scope.
+using Configurations
+end
+
+# Exports from Configurations.jl are not available in this scope.
+Inner.@option struct MyOptions
+    # NOTE: Requires explicit default since `@opions` macro won't know this `Reflect` is
+    # coming from Configurations.jl.
+    type::Inner.Reflect=Inner.Reflect()
+end
+
+end
+
 @testset "from_dict" begin
     @testset "ignore_extra" begin
         d = Dict{String, Any}(
@@ -195,6 +212,12 @@ end
         @test_throws FieldTypeConversionError from_dict(FieldTypeConversionStruct, d)
         d = Dict("str"=>"symbol")
         @test_throws Exception from_dict(FieldTypeConversionStruct_errornous_from_dict_overload, d)
+    end
+
+    @testset "usage in nested modules" begin
+        # Ref: https://github.com/Roger-luo/Configurations.jl/pull/94
+        d = Outer.Inner.to_dict(Outer.MyOptions())
+        @test from_dict(Outer.MyOptions, d) == Outer.MyOptions()
     end
 end
 
