@@ -357,14 +357,14 @@ function from_dict_generated(
             quote
                 $Configurations.parse_jltype($field_value, $alias_map) <: $option_type ||
                     throw(ArgumentError($msg * " $($field_value)"))
-                Reflect()
+                $Reflect()
             end
         else
             quote
                 $field_value == $alias ||
                     $Configurations.parse_jltype($field_value, $alias_map) <: $option_type ||
                     throw(ArgumentError($msg * " $($field_value)"))
-                Reflect()
+                $Reflect()
             end
         end
     else
