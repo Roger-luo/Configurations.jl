@@ -283,11 +283,14 @@ function codegen_field_default(def::JLKwStruct)
         if isempty(vars) # const default
             ret[cond] = field.default
         else
-            jlfn = JLFunction(; args=vars, body=field.default)
+            # NOTE: the default can be a plain `Symbol` referring to
+            # another field, e.g `b = a` (#103), wrap it into a block
+            body = field.default isa Expr ? field.default : Expr(:block, field.default)
+            jlfn = JLFunction(; args=vars, body=body)
             fn = gensym(:fn)
             ret[cond] = quote
                 $fn = $(codegen_ast(jlfn))
-                $PartialDefault($fn, $vars, $(Expr(:quote, field.default)))
+                $PartialDefault($fn, $vars, $(Expr(:quote, body)))
             end
         end
 
@@ -358,11 +361,15 @@ end
 Generate the specialized `from_dict` for the given definition.
 """
 function codegen_from_dict_specialize(def::JLKwStruct)
+    # NOTE: the generated body assigns each field value to a local variable
+    # named after the field, so the argument names must be gensym-ed to avoid
+    # clashing with user field names, e.g. a field named `d` or `T` (#101).
+    @gensym T dict
     quote
         @generated function $Configurations.from_dict_specialize(
-            ::Type{T}, d::AbstractDict{String}
-        ) where {T<:$(def.name)}
-            return $Configurations.from_dict_generated(T, :d)
+            ::Type{$T}, $dict::AbstractDict{String}
+        ) where {$T<:$(def.name)}
+            return $Configurations.from_dict_generated($T, $(QuoteNode(dict)))
         end
     end
 end
