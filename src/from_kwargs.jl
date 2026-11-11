@@ -4,6 +4,10 @@
 Convert keyword arguments to given option type `T` using `convention!`.
 See also [`from_dict`](@ref).
 
+A field of an option type can be specified either by the keywords of its
+sub-fields, or as a whole by its own keyword, e.g with an option instance
+or a dictionary. Specifying both for the same field is an error.
+
 # Convention
 
 - `from_underscore_kwargs!`: use `_` to disambiguate subfields of the same name, this is the default behaviour.
@@ -63,6 +67,9 @@ function unsafe_from_underscore_kwargs!(
 ) where {T}
     foreach_keywords(T) do name, type
         key = underscore(prefix, name)
+        assert_no_subfield_conflict(kw, key, type) do option_type
+            collect_underscore_keywords!(Symbol[], option_type, key)
+        end
 
         from_kwargs_option_key!(d, type, name, key, kw) do field_d, field_type
             unsafe_from_underscore_kwargs!(field_d, field_type, key; kw...)
@@ -78,6 +85,10 @@ end
 
 function unsafe_from_field_kwargs!(d::AbstractDict{String}, ::Type{T}; kw...) where {T}
     foreach_keywords(T) do name, type
+        assert_no_subfield_conflict(kw, name, type) do option_type
+            collect_field_keywords!(Symbol[], option_type, option_type)
+        end
+
         from_kwargs_option_key!(d, type, name, name, kw) do field_d, field_type
             unsafe_from_field_kwargs!(field_d, field_type; kw...)
         end
@@ -111,6 +122,28 @@ function from_kwargs_option_key!(
         from_kwargs_option_key!(f, d, T.b, name, key, kw)
     end
     return d
+end
+
+"""
+    assert_no_subfield_conflict(subfield_keywords, kw, key::Symbol, type)
+
+Throw an `ArgumentError` if the keyword `key` specifies a whole option value
+(of `type`, or an option type in the `Union` `type`) while keywords of its
+sub-fields are also given, since it is ambiguous which one should be used.
+`subfield_keywords(option_type)` returns the sub-field keywords.
+"""
+function assert_no_subfield_conflict(subfield_keywords, kw, key::Symbol, type)
+    haskey(kw, key) || return
+    for option_type in Base.uniontypes(type)
+        is_option(option_type) || continue
+        for k in subfield_keywords(option_type)
+            haskey(kw, k) && throw(ArgumentError(
+                "keyword `$key` specifies the whole option value, it cannot " *
+                "be combined with keyword `$k` of its sub-fields"
+            ))
+        end
+    end
+    return
 end
 
 function validate_keywords(::Type{T}, keys=underscore_keywords(T); kw...) where {T}
@@ -159,9 +192,12 @@ end
 function collect_field_keywords!(list::Vector{Symbol}, ::Type{Top}, ::Type{T}) where {Top,T}
     foreach_keywords(T) do name, type
         if is_option(type)
+            # the whole option value can be specified as well (#105)
+            name in list && throw(DuplicatedFieldError(name, Top))
+            push!(list, name)
             collect_field_keywords!(list, Top, type)
         elseif type isa Union
-            name in list && error(msg)
+            name in list && throw(DuplicatedFieldError(name, Top))
             push!(list, name)
             # recurse into Union
             collect_field_keywords!(list, Top, type.a)
@@ -181,6 +217,8 @@ function collect_underscore_keywords!(
         key = underscore(prefix, name)
 
         if is_option(type)
+            # the whole option value can be specified as well (#105)
+            push!(list, key)
             collect_underscore_keywords!(list, type, key)
         elseif type isa Union
             push!(list, key)

@@ -104,4 +104,81 @@ end
     @test Issue17NoDoc() == Issue17NoDoc(1)
 end
 
+# #105: specify a whole option value in keyword arguments
+@option struct Issue105Inner
+    name::String = "a"
+    int::Int = 1
+end
+
+@option struct Issue105
+    opt::Issue105Inner = Issue105Inner()
+    float::Float64 = 0.1
+    maybe::Maybe{Issue105Inner} = nothing
+end
+
+@option struct Issue105Outer
+    sub::Issue105 = Issue105()
+end
+
+# unambiguous in the field convention (no duplicated sub-field names)
+@option struct Issue105Field
+    opt::Issue105Inner = Issue105Inner()
+    float::Float64 = 0.1
+end
+
+@option struct Issue105FieldOuter
+    sub::Issue105Field = Issue105Field()
+end
+
+# ambiguous types in the field convention
+@option struct Issue105DupOption
+    name::Issue105Inner = Issue105Inner() # sub-field `name` clashes with the field
+end
+
+@option struct Issue105UnionInner
+    m::Maybe{Int} = nothing
+end
+
+@option struct Issue105DupUnion
+    sub::Issue105UnionInner = Issue105UnionInner()
+    m::Maybe{Int} = nothing
+end
+
+@testset "#105 whole option value in kwargs" begin
+    inner = Issue105Inner("x", 2)
+    @test from_kwargs(Issue105; opt = inner) == Issue105(; opt = inner)
+    @test from_kwargs(Issue105; opt = Dict("name" => "y")) == Issue105(; opt = Issue105Inner(; name = "y"))
+    @test from_kwargs(Issue105; maybe = inner, float = 0.5) == Issue105(; maybe = inner, float = 0.5)
+    # leaf keywords still work
+    @test from_kwargs(Issue105; opt_name = "z") == Issue105(; opt = Issue105Inner(; name = "z"))
+
+    # nested: whole value at any level
+    @test from_kwargs(Issue105Outer; sub_opt = inner) == Issue105Outer(; sub = Issue105(; opt = inner))
+    @test from_kwargs(Issue105Outer; sub = Issue105(; float = 2.0)) == Issue105Outer(; sub = Issue105(; float = 2.0))
+
+    # overriding a parsed dict
+    d = Dict{String,Any}("opt" => Dict{String,Any}("name" => "d"), "float" => 1.0)
+    @test from_dict(Issue105, d; opt = inner) == Issue105(; opt = inner, float = 1.0)
+
+    # field convention
+    @test Configurations.from_field_kwargs(Issue105FieldOuter; opt = inner) ==
+        Issue105FieldOuter(; sub = Issue105Field(; opt = inner))
+    @test Configurations.from_field_kwargs(Issue105FieldOuter; sub = Issue105Field(; float = 3.0)) ==
+        Issue105FieldOuter(; sub = Issue105Field(; float = 3.0))
+    @test Configurations.from_field_kwargs(Issue105FieldOuter; name = "n") ==
+        Issue105FieldOuter(; sub = Issue105Field(; opt = Issue105Inner(; name = "n")))
+
+    # whole value and sub-field keywords together are ambiguous
+    @test_throws ArgumentError from_kwargs(Issue105; opt = inner, opt_name = "z")
+    @test_throws ArgumentError from_kwargs(Issue105; maybe = inner, maybe_int = 3)
+    @test_throws ArgumentError from_kwargs(Issue105Outer; sub = Issue105(), sub_opt_name = "z")
+    @test_throws ArgumentError Configurations.from_field_kwargs(Issue105FieldOuter; opt = inner, name = "z")
+
+    @test_throws DuplicatedFieldError Configurations.from_field_kwargs(Issue105DupOption; int = 1)
+    @test_throws DuplicatedFieldError Configurations.from_field_kwargs(Issue105DupUnion; m = 1)
+
+    # still rejects unknown keywords
+    @test_throws InvalidKeyError from_kwargs(Issue105; foo = 1)
+end
+
 end # module
