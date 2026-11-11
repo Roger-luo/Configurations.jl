@@ -125,8 +125,11 @@ function from_dict(::Type{OptionType}, optionfield::OptionField{f_name}, ::Type{
     end
 end
 
+# NOTE: only map element-wise when the input is a vector, other inputs
+# (e.g. a `String`) fall back to the generic method so that a user overloaded
+# 3-arg `from_dict(::Type{OptionType}, ::Type{<:AbstractVector}, x)` is respected.
 function from_dict(
-    ::Type{OptionType}, of::OptionField, ::Type{T}, x
+    ::Type{OptionType}, of::OptionField, ::Type{T}, x::AbstractVector
 ) where {OptionType,T<:AbstractVector}
     if eltype(T) isa Union
         return map(x) do each
@@ -167,11 +170,13 @@ function deprecated_conversion(::Type{OptionType}, ::Type{T}, x) where {OptionTy
     end
 end
 
-@generated function from_dict_union_type(
-    ::Type{OptionType}, ::OptionField{f_name}, ::Type{FieldType}, value
-) where {OptionType,f_name,FieldType}
-    types = Base.uniontypes(FieldType)
-    return from_dict_union_type_generated(OptionType, OptionField(f_name), types, :value)
+# NOTE: this must not be a `@generated` function, because the generator would
+# run in the world age of Configurations and thus cannot see methods such as
+# `is_option` or `get_type_alias_map` defined later for user option types (#96).
+function from_dict_union_type(
+    ::Type{OptionType}, of::OptionField, ::Type{FieldType}, value
+) where {OptionType,FieldType}
+    return from_dict_union_type_dynamic(OptionType, of, FieldType, value)
 end
 
 function from_dict_union_type_dynamic(
@@ -191,6 +196,8 @@ function from_dict_union_type_dynamic(
 
     for T in types
         if is_option(T)
+            value isa T && return value
+            value isa AbstractDict || continue
             alias = type_alias(T)
             reflect_idx = find_reflect_field(T)
             # type can be determined by alias

@@ -20,7 +20,19 @@ The type conversion for option types work as following:
 Thus, if `Base.convert` is already overloaded, this will just work, or if the conversion rule is contextual based
 on the option type, one can also overload [`Configurations.from_dict`](@ref), this also avoids potential type piracy.
 
-For serialization, one can overload [`Configurations.to_dict`](@ref), this 
+!!! note
+    The above only applies to fields whose type is **not** an option type. When the field type
+    is itself an option type (or `Maybe` of an option type), `Base.convert` is never called;
+    the nested dictionary is parsed by `from_dict(FieldOptionType, dict)` directly. To customize
+    how a nested option type is parsed, overload the 2-arg [`from_dict`](@ref) instead:
+
+    ```julia
+    function Configurations.from_dict(::Type{MyNestedOption}, d::AbstractDict{String})
+        # custom parsing of `d` ...
+    end
+    ```
+
+For serialization, one can overload [`Configurations.to_dict`](@ref).
 
 ## The Overloading Interface
 
