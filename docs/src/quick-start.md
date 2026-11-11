@@ -212,6 +212,28 @@ an option type from keyword arguments via [`from_kwargs`](@ref)
 Configurations.from_kwargs
 ```
 
+Fields of a nested option type are specified with `_`-joined keywords, or the whole
+nested option can be given at once, e.g
+
+```julia
+@option struct Server
+    host::String = "localhost"
+    port::Int = 8080
+end
+
+@option struct App
+    server::Server = Server()
+    debug::Bool = false
+end
+
+from_kwargs(App; server_port = 1234)          # a single sub-field
+from_kwargs(App; server = Server(; port = 1234)) # the whole option
+from_kwargs(App; server = Dict("port" => 1234))  # or as a dictionary
+```
+
+specifying both the whole option and one of its sub-fields (e.g `server` and
+`server_port`) is an error.
+
 A real world example is [the Pluto configuration](https://github.com/fonsp/Pluto.jl/blob/main/src/Configuration.jl#L159).
 
 ## Modify Parsed Configurations
