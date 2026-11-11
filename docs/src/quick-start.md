@@ -204,7 +204,7 @@ end
 end
 ```
 
-by default [`from_dict`](@ref) or [`from_toml`](@ref) uses the [`from_underscore_kwargs!`](@ref)
+by default [`from_dict`](@ref) or [`from_toml`](@ref) uses the `Configurations.from_underscore_kwargs!`
 convention, so one can change the `field` entry in `SubOption` above via
 
 ```julia
