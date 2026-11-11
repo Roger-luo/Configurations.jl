@@ -1,9 +1,12 @@
 name: Downstream
 on:
   push:
-    branches: [master]
+    branches: [main]
     tags: [v*]
   pull_request:
+permissions:
+  actions: write
+  contents: read
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -12,6 +15,7 @@ jobs:
   test:
     name: ${{ matrix.package.repo }}/${{ matrix.package.group }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     env:
       GROUP: ${{ matrix.package.group }}
     strategy:
@@ -27,11 +31,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
-      - uses: julia-actions/setup-julia@v1
+      - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.julia-version }}
-          arch: x64
-      - uses: julia-actions/julia-buildpkg@latest
+      - uses: julia-actions/cache@v3
+      - uses: julia-actions/julia-buildpkg@v1
       - name: Clone Downstream
         uses: actions/checkout@v7
         with:

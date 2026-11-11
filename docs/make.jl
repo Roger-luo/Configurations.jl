@@ -21,6 +21,9 @@ makedocs(;
     ],
     repo = "https://github.com/Roger-luo/Configurations.jl",
     sitename = "Configurations.jl",
+    # NOTE: the reference page uses `@autodocs` to list everything, which
+    # duplicates docstrings already shown on other pages, skip them with a warning
+    warnonly = [:autodocs_block],
 )
 
 deploydocs(; repo = "github.com/Roger-luo/Configurations.jl")
