@@ -16,6 +16,7 @@ concurrency:
 permissions:
   actions: write # needed by julia-actions/cache to delete old caches
   contents: read
+  id-token: write # needed by codecov OIDC upload
 jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ github.event_name }}
@@ -44,5 +45,5 @@ jobs:
       - uses: codecov/codecov-action@v7
         with:
           files: lcov.info
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true # no CODECOV_TOKEN secret needed
           fail_ci_if_error: false
