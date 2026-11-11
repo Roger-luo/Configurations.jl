@@ -107,6 +107,33 @@ function validate_option_def(mod::Module, def::JLKwStruct)
 end
 
 """
+    codegen_documented_struct(def::JLKwStruct)
+
+Generate the struct definition (with its keyword constructor), with the
+docstring attached to the `struct` expression itself, so that field
+docstrings are collected by the docsystem as for plain structs (#17).
+"""
+function codegen_documented_struct(def::JLKwStruct)
+    ex = codegen_ast(def)
+    found = Ref(false)
+    function mark_doc(x)
+        x isa Expr || return x
+        if !found[] && x.head === :struct
+            found[] = true
+            return :(Core.@__doc__ $x)
+        end
+        return Expr(x.head, map(mark_doc, x.args)...)
+    end
+    ex = mark_doc(ex)
+    # NOTE: fallback to document the type name
+    found[] || return quote
+        $ex
+        Core.@__doc__ $(def.name)
+    end
+    return ex
+end
+
+"""
     codegen_option_type(mod::Module, def::JLKwStruct)
 
 Generate the `Configurations` option type definition from
@@ -118,8 +145,7 @@ function codegen_option_type(mod::Module, def::JLKwStruct)
     add_field_defaults!(mod, def)
 
     quote
-        $(codegen_ast(def))
-        Core.@__doc__ $(def.name)
+        $(codegen_documented_struct(def))
         $(codegen_create(def))
         $(codegen_is_option(def))
         $(codegen_convert(def))
