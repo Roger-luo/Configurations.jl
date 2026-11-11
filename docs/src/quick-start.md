@@ -162,6 +162,32 @@ end
 
 the type information of different type will be embeded in the corresponding string
 of the `Reflect` field.
+
+## Secret values
+
+Use [`Secret`](@ref) for sensitive fields such as passwords or API tokens, so they
+are masked when the option type is printed, e.g in logs or the REPL
+
+```@repl secret
+using Configurations
+@option struct Database
+    user::String = "admin"
+    password::Secret{String}
+end
+db = from_dict(Database, Dict("password" => "hunter2"))
+reveal(db.password)
+```
+
+plain values are wrapped automatically when parsing or using the keyword constructor,
+and [`to_dict`](@ref) / [`to_toml`](@ref) write the real value so the configuration
+round-trips. Note that `Secret` only prevents accidental printing, it does not protect
+the value in memory.
+
+```@docs
+Secret
+reveal
+```
+
 ## Create pretty printing for your option type
 
 One can overload the `Base.show` method to create your own pretty printing. However, if you are fine with
