@@ -80,4 +80,28 @@ end
     @test from_dict(Issue96Mixed, to_dict(y)) == y
 end
 
+# #17: field docstrings
+"Issue17 docstring"
+@option "issue17" struct Issue17
+    "doc of x"
+    x::Int
+    "doc of y"
+    y::Real = 1
+end
+
+@option struct Issue17NoDoc
+    a::Int = 1
+end
+
+@testset "#17 field docstrings" begin
+    binding = Base.Docs.Binding(@__MODULE__, :Issue17)
+    docstr = Base.Docs.meta(@__MODULE__)[binding].docs[Union{}]
+    @test docstr.data[:fields][:x] == "doc of x"
+    @test docstr.data[:fields][:y] == "doc of y"
+    @test occursin("Issue17 docstring", string(@doc(Issue17)))
+    @test Issue17(; x = 2) == Issue17(2, 1)
+    @test from_dict(Issue17, Dict{String, Any}("x" => 3)) == Issue17(3, 1)
+    @test Issue17NoDoc() == Issue17NoDoc(1)
+end
+
 end # module
