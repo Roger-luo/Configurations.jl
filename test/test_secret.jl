@@ -77,6 +77,11 @@ end
         @test SecretDB(; password = "hunter2") == SecretDB(; password = Secret("hunter2"))
         @test reveal(from_kwargs(SecretDB; password = "pw").password) == "pw"
 
+        # already wrapped values are kept (and converted if needed)
+        db = from_dict(SecretDB, Dict{String,Any}("password" => Secret("pw"), "port" => Secret(1.0)))
+        @test db.password === Secret("pw")
+        @test db.port === Secret(1)
+
         @test_throws Exception from_dict(SecretDB, Dict{String,Any}("password" => 1))
     end
 
