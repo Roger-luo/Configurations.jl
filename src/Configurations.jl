@@ -40,7 +40,6 @@ export @option,
     YAMLStyle,
     JSONStyle
 
-include("compat.jl")
 include("errors.jl")
 include("types.jl")
 include("convert.jl")

@@ -1,7 +1,7 @@
 # Configurations
 
 [![CI][ci-img]][ci-url]
-[![codecov][codecov-img]](codecov-url)
+[![codecov][codecov-img]][codecov-url]
 [![][docs-stable-img]][docs-stable-url]
 [![][docs-dev-img]][docs-dev-url]
 [![Aqua QA][aqua-img]][aqua-url]
@@ -76,9 +76,9 @@ OptionB(;
 
 MIT License
 
-[ci-img]: https://github.com/Roger-luo/Configurations.jl/workflows/CI/badge.svg
-[ci-url]: https://github.com/Roger-luo/Configurations.jl/actions
-[codecov-img]: https://codecov.io/gh/Roger-luo/Configurations.jl/branch/master/graph/badge.svg?token=U604BQGRV1
+[ci-img]: https://github.com/Roger-luo/Configurations.jl/actions/workflows/tests.yml/badge.svg?branch=main
+[ci-url]: https://github.com/Roger-luo/Configurations.jl/actions/workflows/tests.yml
+[codecov-img]: https://codecov.io/gh/Roger-luo/Configurations.jl/branch/main/graph/badge.svg?token=U604BQGRV1
 [codecov-url]: https://codecov.io/gh/Roger-luo/Configurations.jl
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
 [docs-dev-url]: https://Roger-luo.github.io/Configurations.jl/dev/

@@ -318,7 +318,7 @@ function from_dict_generated(::Type{OptionType}, value::Symbol) where {OptionTyp
         if f_default === nothing && length(types) == 1 && is_option(types[1])
             jl.otherwise = quote
                 $field_value = $value[$key]
-                $var = $body
+                $var = $body # COV_EXCL_LINE (generator code, not tracked by coverage)
             end
         elseif f_default === nothing
             jl.otherwise = quote
@@ -326,13 +326,13 @@ function from_dict_generated(::Type{OptionType}, value::Symbol) where {OptionTyp
                 if $field_value isa AbstractDict && isempty($field_value)
                     $var = nothing
                 else
-                    $var = $body
+                    $var = $body # COV_EXCL_LINE (generator code, not tracked by coverage)
                 end
             end
         else
             jl.otherwise = quote
                 $field_value = $value[$key]
-                $var = $body
+                $var = $body # COV_EXCL_LINE (generator code, not tracked by coverage)
             end
         end
 
@@ -407,7 +407,7 @@ function from_dict_maybe_type_generated(
             if $value === nothing
                 nothing
             else
-                $(from_dict_generated(option_type, of, types[1], value))
+                $(from_dict_generated(option_type, of, types[1], value)) # COV_EXCL_LINE (generator code, not tracked by coverage)
             end
         end
     else # Maybe{Union{A, B, C...}}
@@ -415,7 +415,7 @@ function from_dict_maybe_type_generated(
             if $value === nothing
                 nothing
             else
-                $(from_dict_union_type_generated(option_type, of, types, value))
+                $(from_dict_union_type_generated(option_type, of, types, value)) # COV_EXCL_LINE (generator code, not tracked by coverage)
             end
         end
     end
