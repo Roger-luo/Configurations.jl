@@ -17,6 +17,8 @@ export @option,
     Maybe,
     Reflect,
     OptionField,
+    Secret,
+    reveal,
     # reflection
     field_default,
     # field_alias,
@@ -51,5 +53,6 @@ include("from_kwargs.jl")
 include("from_toml.jl")
 # include("parse.jl")
 include("serialize.jl")
+include("secret.jl")
 
 end
